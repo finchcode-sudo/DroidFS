@@ -60,7 +60,15 @@ class EncryptedFileReaderFileSystem(private val encryptedVolume: EncryptedVolume
         override fun read(sink: Buffer, byteCount: Long): Long {
             val buffer = ByteArray(byteCount.toInt())
             val read = encryptedVolume.read(fileHandle, fileOffset.toLong(), buffer, 0, byteCount)
-            sink.write(buffer)
+            if (read <= 0) {
+                return -1L // 已经读到文件末尾（或读取出错），必须返回 -1 表示流结束，
+                           // 否则调用方会把这次当成"又读到 0 字节"死循环重试
+            }
+            sink.write(buffer, 0, read) // 只写入真正读到的字节数，不能整个 buffer 都写进去——
+                                         // byteCount 通常比实际能读到的字节数大，
+                                         // buffer 末尾没读到的部分是全零的垃圾数据，
+                                         // 之前整个 buffer 写入会把这些垃圾字节混进图片数据流，
+                                         // 导致图片解码失败或花屏
             fileOffset += read
             return read.toLong()
         }
@@ -77,11 +85,20 @@ class EncryptedFileReaderFileSystem(private val encryptedVolume: EncryptedVolume
     }
 
     override fun canonicalize(path: Path): Path {
-        TODO("Not yet implemented")
+        // 加密卷内是扁平的虚拟路径，不存在符号链接/相对路径解析的概念，
+        // 只需要确认这个路径真的存在（Okio 约定：路径不存在时要抛 FileNotFoundException）
+        metadataOrNull(path) ?: throw java.io.FileNotFoundException("No such file: $path")
+        return path
     }
 
     override fun metadataOrNull(path: Path): FileMetadata? {
-        TODO("Not yet implemented")
+        val stat = encryptedVolume.getAttr(path.toString()) ?: return null
+        return FileMetadata(
+            isRegularFile = stat.type == Stat.S_IFREG,
+            isDirectory = stat.type == Stat.S_IFDIR,
+            size = stat.size,
+            lastModifiedAtMillis = stat.mTime
+        )
     }
 
     override fun openReadOnly(file: Path): FileHandle {
