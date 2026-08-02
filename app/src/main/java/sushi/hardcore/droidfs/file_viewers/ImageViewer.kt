@@ -15,6 +15,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import coil3.ImageLoader
 import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.placeholder
 import coil3.request.target
 import coil3.request.transformations
 import coil3.size.Size
@@ -176,6 +178,11 @@ class ImageViewer: FileViewerActivity(true) {
             imageViewModel.rotationAngle = 0f
         }
         imageRequestBuilder = ImageRequest.Builder(this).data(fileViewerViewModel.filePath).target(binding.imageViewer)
+            // 切换图片时，先用当前显示的图片作为占位图，等新图片解码完成后再替换，
+            // 避免 Coil 默认清空 ImageView 造成的"先变空白再弹出新图"的闪烁；
+            // 再加个淡入过渡，让切换看起来更顺滑。
+            .placeholder(binding.imageViewer.drawable)
+            .crossfade(150)
         if (imageViewModel.rotationAngle.mod(360f) != 0f) {
             rotateImage()
         } else {
