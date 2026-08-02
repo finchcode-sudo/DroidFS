@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Handler
-import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -13,12 +12,9 @@ import androidx.activity.viewModels
 import androidx.core.view.isGone
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import coil3.ImageLoader
-import coil3.request.ImageRequest
-import coil3.request.crossfade
-import coil3.request.placeholder
-import coil3.request.target
-import coil3.request.transformations
 import coil3.size.Size
 import coil3.transform.Transformation
 import kotlinx.coroutines.launch
@@ -27,39 +23,31 @@ import sushi.hardcore.droidfs.R
 import sushi.hardcore.droidfs.databinding.ActivityImageViewerBinding
 import sushi.hardcore.droidfs.filesystems.EncryptedFileReaderFileSystem
 import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
-import sushi.hardcore.droidfs.widgets.ZoomableImageView
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import kotlin.math.abs
 
 class ImageViewer: FileViewerActivity(true) {
     companion object {
         private const val hideDelay: Long = 3000
-        private const val MIN_SWIPE_DISTANCE = 150
     }
 
     class ImageViewModel : ViewModel() {
-        var rotationAngle: Float = 0f
         var imageLoader: ImageLoader? = null
+        val rotationAngles = mutableMapOf<String, Float>()
     }
 
-    private lateinit var fileName: String
     private lateinit var handler: Handler
     private val imageViewModel: ImageViewModel by viewModels()
-    private var imageRequestBuilder: ImageRequest.Builder? = null
-    private var x1 = 0F
-    private var x2 = 0F
+    private lateinit var pagerAdapter: ImageViewerPagerAdapter
     private var slideshowActive = false
-    private var orientationTransformation: OrientationTransformation? = null
     private val hideUI = Runnable {
         binding.overlay.visibility = View.GONE
         hideSystemUi()
     }
     private val slideshowNext = Runnable {
-        if (slideshowActive){
-            binding.imageViewer.resetZoomFactor()
-            swipeImage(-1F, true)
+        if (slideshowActive) {
+            goToPage(1)
         }
     }
     private lateinit var binding: ActivityImageViewerBinding
@@ -77,63 +65,38 @@ class ImageViewer: FileViewerActivity(true) {
                 .fileSystem(EncryptedFileReaderFileSystem(encryptedVolume)).build()
         }
         handler = Handler(mainLooper)
-        binding.imageViewer.setOnInteractionListener(object : ZoomableImageView.OnInteractionListener {
-            override fun onSingleTap(event: MotionEvent?) {
-                handler.removeCallbacks(hideUI)
-                if (binding.overlay.isGone) {
-                    binding.overlay.visibility = View.VISIBLE
-                    showPartialSystemUi()
-                    handler.postDelayed(hideUI, hideDelay)
-                } else {
-                    hideUI.run()
-                }
-            }
 
-            override fun onTouch(event: MotionEvent?) {
-                if (!binding.imageViewer.isZoomed) {
-                    when (event?.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            x1 = event.x
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            x2 = event.x
-                            val deltaX = x2 - x1
-                            if (abs(deltaX) > MIN_SWIPE_DISTANCE) {
-                                askSaveRotation { swipeImage(deltaX) }
-                            }
-                        }
-                    }
-                }
-            }
-        })
         binding.imageDelete.setOnClickListener {
             CustomAlertDialogBuilder(this, theme)
                 .keepFullScreen()
                 .setTitle(R.string.warning)
                 .setPositiveButton(R.string.ok) { _, _ ->
                     lifecycleScope.launch {
+                        val deletedIndex = fileViewerViewModel.currentPlaylistIndex
                         if (deleteCurrentFile()) {
-                            if (fileViewerViewModel.playlist.isEmpty()) { // no more image left
+                            if (fileViewerViewModel.playlist.isEmpty()) {
                                 goBackToExplorer()
                             } else {
-                                loadImage(true)
+                                pagerAdapter.notifyItemRemoved(deletedIndex)
+                                binding.imageViewerPager.setCurrentItem(fileViewerViewModel.currentPlaylistIndex, false)
+                                updateFileName()
                             }
                         } else {
                             CustomAlertDialogBuilder(this@ImageViewer, theme)
                                 .keepFullScreen()
                                 .setTitle(R.string.error)
-                                .setMessage(getString(R.string.remove_failed, fileName))
+                                .setMessage(getString(R.string.remove_failed, File(fileViewerViewModel.filePath!!).name))
                                 .setPositiveButton(R.string.ok, null)
                                 .show()
                         }
                     }
                 }
                 .setNegativeButton(R.string.cancel, null)
-                .setMessage(getString(R.string.single_delete_confirm, fileName))
+                .setMessage(getString(R.string.single_delete_confirm, File(fileViewerViewModel.filePath!!).name))
                 .show()
         }
         binding.imageButtonSlideshow.setOnClickListener {
-            if (!slideshowActive){
+            if (!slideshowActive) {
                 slideshowActive = true
                 handler.postDelayed(slideshowNext, Constants.SLIDESHOW_DELAY)
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -144,16 +107,10 @@ class ImageViewer: FileViewerActivity(true) {
             }
         }
         binding.imagePrevious.setOnClickListener {
-            askSaveRotation {
-                binding.imageViewer.resetZoomFactor()
-                swipeImage(1F)
-            }
+            askSaveRotation { goToPage(-1) }
         }
         binding.imageNext.setOnClickListener {
-            askSaveRotation {
-                binding.imageViewer.resetZoomFactor()
-                swipeImage(-1F)
-            }
+            askSaveRotation { goToPage(1) }
         }
         binding.imageRotateRight.setOnClickListener { onClickRotate(90f) }
         binding.imageRotateLeft.setOnClickListener { onClickRotate(-90f) }
@@ -167,27 +124,67 @@ class ImageViewer: FileViewerActivity(true) {
                 }
             }
         }
-        loadImage(false)
+
+        lifecycleScope.launch {
+            createPlaylist()
+            setupPager()
+        }
+
         handler.postDelayed(hideUI, hideDelay)
     }
 
-    private fun loadImage(newImage: Boolean) {
-        fileName = File(fileViewerViewModel.filePath!!).name
-        binding.textFilename.text = fileName
-        if (newImage) {
-            imageViewModel.rotationAngle = 0f
-        }
-        imageRequestBuilder = ImageRequest.Builder(this).data(fileViewerViewModel.filePath).target(binding.imageViewer)
-            // 切换图片时，先用当前显示的图片作为占位图，等新图片解码完成后再替换，
-            // 避免 Coil 默认清空 ImageView 造成的"先变空白再弹出新图"的闪烁；
-            // 再加个淡入过渡，让切换看起来更顺滑。
-            .placeholder(binding.imageViewer.drawable)
-            .crossfade(150)
-        if (imageViewModel.rotationAngle.mod(360f) != 0f) {
-            rotateImage()
+    private fun setupPager() {
+        pagerAdapter = ImageViewerPagerAdapter(
+            playlist = fileViewerViewModel.playlist,
+            imageLoader = imageViewModel.imageLoader!!,
+            rotationAngles = imageViewModel.rotationAngles,
+            onSingleTap = { toggleOverlay() }
+        )
+        binding.imageViewerPager.adapter = pagerAdapter
+        binding.imageViewerPager.offscreenPageLimit = 1
+        binding.imageViewerPager.setCurrentItem(fileViewerViewModel.currentPlaylistIndex, false)
+        updateFileName()
+
+        binding.imageViewerPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                fileViewerViewModel.currentPlaylistIndex = position
+                fileViewerViewModel.filePath = fileViewerViewModel.playlist[position].fullPath
+                updateFileName()
+                if (slideshowActive) {
+                    handler.removeCallbacks(slideshowNext)
+                    handler.postDelayed(slideshowNext, Constants.SLIDESHOW_DELAY)
+                }
+            }
+        })
+    }
+
+    private fun updateFileName() {
+        binding.textFilename.text = File(fileViewerViewModel.filePath!!).name
+    }
+
+    private fun toggleOverlay() {
+        handler.removeCallbacks(hideUI)
+        if (binding.overlay.isGone) {
+            binding.overlay.visibility = View.VISIBLE
+            showPartialSystemUi()
+            handler.postDelayed(hideUI, hideDelay)
         } else {
-            imageViewModel.imageLoader!!.enqueue(imageRequestBuilder!!.build())
+            hideUI.run()
         }
+    }
+
+    private fun goToPage(delta: Int) {
+        val size = fileViewerViewModel.playlist.size
+        if (size == 0) return
+        val next = (binding.imageViewerPager.currentItem + delta).mod(size)
+        binding.imageViewerPager.setCurrentItem(next, true)
+    }
+
+    private fun currentPath() = fileViewerViewModel.playlist[binding.imageViewerPager.currentItem].fullPath
+
+    private fun currentPageViewHolder(): ImageViewerPagerAdapter.PageViewHolder? {
+        val recyclerView = binding.imageViewerPager.getChildAt(0) as? RecyclerView
+        return recyclerView?.findViewHolderForAdapterPosition(binding.imageViewerPager.currentItem) as? ImageViewerPagerAdapter.PageViewHolder
     }
 
     override fun onUserInteraction() {
@@ -197,25 +194,13 @@ class ImageViewer: FileViewerActivity(true) {
     }
 
     private fun onClickRotate(angle: Float) {
-        imageViewModel.rotationAngle += angle
-        binding.imageViewer.restoreZoomNormal()
-        rotateImage()
+        val path = currentPath()
+        imageViewModel.rotationAngles[path] = (imageViewModel.rotationAngles[path] ?: 0f) + angle
+        currentPageViewHolder()?.imageView?.restoreZoomNormal()
+        pagerAdapter.notifyItemChanged(binding.imageViewerPager.currentItem)
     }
 
-    private fun swipeImage(deltaX: Float, slideshowSwipe: Boolean = false) {
-        lifecycleScope.launch {
-            playlistNext(deltaX < 0)
-            loadImage(true)
-            if (slideshowActive) {
-                if (!slideshowSwipe) { // reset slideshow delay if user swipes
-                    handler.removeCallbacks(slideshowNext)
-                }
-                handler.postDelayed(slideshowNext, Constants.SLIDESHOW_DELAY)
-            }
-        }
-    }
-
-    private fun stopSlideshow(){
+    private fun stopSlideshow() {
         slideshowActive = false
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         Toast.makeText(this, R.string.slideshow_stopped, Toast.LENGTH_SHORT).show()
@@ -235,48 +220,50 @@ class ImageViewer: FileViewerActivity(true) {
         }
     }
 
-    private fun rotateImage() {
-        orientationTransformation = OrientationTransformation(imageViewModel.rotationAngle).also {
-            imageViewModel.imageLoader!!.enqueue(imageRequestBuilder!!.transformations(it).build())
-        }
-    }
-
-    private fun askSaveRotation(callback: () -> Unit){
-        if (imageViewModel.rotationAngle.mod(360f) != 0f && !slideshowActive) {
+    private fun askSaveRotation(callback: () -> Unit) {
+        val path = currentPath()
+        val angle = imageViewModel.rotationAngles[path] ?: 0f
+        if (angle.mod(360f) != 0f && !slideshowActive) {
+            val transformation = pagerAdapter.orientationTransformations[path]
             CustomAlertDialogBuilder(this, theme)
                 .keepFullScreen()
                 .setTitle(R.string.warning)
                 .setMessage(R.string.ask_save_img_rotated)
-                .setNegativeButton(R.string.no) { _, _ -> callback() }
+                .setNegativeButton(R.string.no) { _, _ ->
+                    imageViewModel.rotationAngles[path] = 0f
+                    callback()
+                }
                 .setNeutralButton(R.string.cancel, null)
                 .setPositiveButton(R.string.yes) { _, _ ->
-                        val outputStream = ByteArrayOutputStream()
-                        if (orientationTransformation?.bitmap?.compress(
-                                if (fileName.endsWith("png", true)){
-                                    Bitmap.CompressFormat.PNG
-                                } else {
-                                    Bitmap.CompressFormat.JPEG
-                                }, 90, outputStream) == true
-                        ){
-                            if (encryptedVolume.importFile(ByteArrayInputStream(outputStream.toByteArray()), fileViewerViewModel.filePath!!)) {
-                                Toast.makeText(this, R.string.image_saved_successfully, Toast.LENGTH_SHORT).show()
-                                callback()
+                    val outputStream = ByteArrayOutputStream()
+                    if (transformation?.bitmap?.compress(
+                            if (path.endsWith("png", true)) {
+                                Bitmap.CompressFormat.PNG
                             } else {
-                                CustomAlertDialogBuilder(this, theme)
-                                    .keepFullScreen()
-                                    .setTitle(R.string.error)
-                                    .setMessage(R.string.file_write_failed)
-                                    .setPositiveButton(R.string.ok, null)
-                                    .show()
-                            }
+                                Bitmap.CompressFormat.JPEG
+                            }, 90, outputStream
+                        ) == true
+                    ) {
+                        if (encryptedVolume.importFile(ByteArrayInputStream(outputStream.toByteArray()), path)) {
+                            Toast.makeText(this, R.string.image_saved_successfully, Toast.LENGTH_SHORT).show()
+                            imageViewModel.rotationAngles[path] = 0f
+                            callback()
                         } else {
                             CustomAlertDialogBuilder(this, theme)
                                 .keepFullScreen()
                                 .setTitle(R.string.error)
-                                .setMessage(R.string.bitmap_compress_failed)
+                                .setMessage(R.string.file_write_failed)
                                 .setPositiveButton(R.string.ok, null)
                                 .show()
                         }
+                    } else {
+                        CustomAlertDialogBuilder(this, theme)
+                            .keepFullScreen()
+                            .setTitle(R.string.error)
+                            .setMessage(R.string.bitmap_compress_failed)
+                            .setPositiveButton(R.string.ok, null)
+                            .show()
+                    }
                 }
                 .show()
         } else {
@@ -286,6 +273,6 @@ class ImageViewer: FileViewerActivity(true) {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        binding.imageViewer.restoreZoomNormal()
+        currentPageViewHolder()?.imageView?.restoreZoomNormal()
     }
 }
