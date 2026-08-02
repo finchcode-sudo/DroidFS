@@ -82,6 +82,11 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                         last.set(curr);
                         start.set(last);
                         mode = DRAG;
+                        // 放大状态下，先禁止父容器（ViewPager2）拦截触摸事件，
+                        // 否则在图片上拖动会被父容器误判成"翻页"手势。
+                        if (isZoomed()) {
+                            getParent().requestDisallowInterceptTouchEvent(true);
+                        }
                         break;
 
                     case MotionEvent.ACTION_MOVE:
@@ -104,6 +109,8 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
                         int yDiff = (int) Math.abs(curr.y - start.y);
                         if (xDiff < CLICK && yDiff < CLICK)
                             performClick();
+                        // 手指抬起后恢复正常，未放大时把翻页手势交还给 ViewPager2
+                        getParent().requestDisallowInterceptTouchEvent(isZoomed());
                         break;
 
                     case MotionEvent.ACTION_POINTER_UP:
@@ -210,6 +217,7 @@ public class ZoomableImageView extends androidx.appcompat.widget.AppCompatImageV
         @Override
         public boolean onScaleBegin(ScaleGestureDetector detector) {
             mode = ZOOM;
+            getParent().requestDisallowInterceptTouchEvent(true);
             return true;
         }
 
