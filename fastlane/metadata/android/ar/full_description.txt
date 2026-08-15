@@ -20,7 +20,7 @@ DroidFS هي طريقة بديلة لاستخدام أنظمة ملفات الت
 يمكنك رفض أية صلاحية من الصلاحيات السابقة إذا لم تكن بحاجة إلى الميزة المرادفة لها.
 
 DroidFS مجاني ومفتوح المصدر، يمكنك العثور على مستودع المشروع:
-- على GitHub: https://github.com/hardcore-sushi/DroidFS
+- على GitHub: https://github.com/finchcode-sudo/DroidFS
 - على مثيل Gitea من مشروع Chapril: https://forge.chapril.org/hardcoresushi/DroidFS
 
 <b>Warning !</b>
