@@ -104,7 +104,7 @@
             android:title="@string/github"
             android:summary="@string/github_summary"
             android:icon="@drawable/icon_github">
-            <intent android:action="android.intent.action.VIEW" android:data="https://github.com/hardcore-sushi/DroidFS"/>
+            <intent android:action="android.intent.action.VIEW" android:data="https://github.com/finchcode-sudo/DroidFS"/>
         </Preference>
 
         <Preference
