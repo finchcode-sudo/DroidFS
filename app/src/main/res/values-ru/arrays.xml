@@ -1,0 +1,26 @@
+<resources>
+    <string-array name="sort_orders_entries">
+        <item>Имя</item>
+        <item>Размер</item>
+        <item>Дата</item>
+        <item>Имя (по убыванию)</item>
+        <item>Размер (по убыванию)</item>
+        <item>Дата (по убыванию)</item>
+    </string-array>
+
+    <string-array name="color_names">
+        <item>Зелёный</item>
+        <item>Красный</item>
+        <item>Синий</item>
+        <item>Жёлтый</item>
+        <item>Оранжевый</item>
+        <item>Фиолетовый</item>
+        <item>Розовый</item>
+    </string-array>
+
+    <string-array name="export_methods">
+        <item>Автовыбор (зависит от доступной памяти)</item>
+        <item>Временный файл в хранилище (надёжно, но могут остаться следы)</item>
+        <item>Файл в памяти (безопаснее, но не всегда возможно)</item>
+    </string-array>
+</resources>

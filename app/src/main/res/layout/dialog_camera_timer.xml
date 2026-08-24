@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingHorizontal="@dimen/dialog_horizontal_padding">
+
+    <EditText
+        android:id="@+id/dialog_edit_text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:inputType="text"
+        android:imeOptions="actionDone">
+        <requestFocus/>
+    </EditText>
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/switch_repeat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="@string/take_photos_repeatedly"/>
+
+</LinearLayout>

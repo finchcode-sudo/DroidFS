@@ -1,0 +1,10 @@
+<resources>
+    <string-array name="sort_orders_entries">
+        <item>Nome</item>
+        <item>Tamanho</item>
+        <item>Data</item>
+        <item>Nome (decres.)</item>
+        <item>Tamanho (decres.)</item>
+        <item>Data (decres.)</item>
+    </string-array>
+</resources>

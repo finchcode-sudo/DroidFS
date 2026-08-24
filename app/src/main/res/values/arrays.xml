@@ -1,0 +1,72 @@
+<resources>
+    <string-array name="gocryptfs_encryption_ciphers">
+        <item>@string/auto</item>
+        <item>AES-GCM</item>
+        <item>XChaCha20-Poly1305</item>
+    </string-array>
+
+    <string-array name="cryfs_encryption_ciphers">
+        <item>xchacha20-poly1305</item>
+        <item>aes-256-gcm</item>
+        <item>aes-128-gcm</item>
+        <item>twofish-256-gcm</item>
+        <item>twofish-128-gcm</item>
+        <item>serpent-256-gcm</item>
+        <item>serpent-128-gcm</item>
+        <item>cast-256-gcm</item>
+        <item>mars-448-gcm</item>
+        <item>mars-256-gcm</item>
+        <item>mars-128-gcm</item>
+    </string-array>
+
+    <string-array name="sort_orders_entries">
+        <item>Name</item>
+        <item>Size</item>
+        <item>Date</item>
+        <item>Name (desc)</item>
+        <item>Size (desc)</item>
+        <item>Date (desc)</item>
+    </string-array>
+
+    <string-array name="color_names">
+        <item>Green</item>
+        <item>Red</item>
+        <item>Blue</item>
+        <item>Yellow</item>
+        <item>Orange</item>
+        <item>Purple</item>
+        <item>Pink</item>
+    </string-array>
+
+    <string-array name="export_methods">
+        <item>Auto (depending on available memory)</item>
+        <item>Temporary export on disk (reliable but may leave traces)</item>
+        <item>Memory file (safer but doesn\'t always work)</item>
+    </string-array>
+
+    <!-- don't translate the following otherwise the app will crash -->
+    <string-array name="sort_orders_values">
+        <item>name</item>
+        <item>size</item>
+        <item>date</item>
+        <item>name_desc</item>
+        <item>size_desc</item>
+        <item>date_desc</item>
+    </string-array>
+
+    <string-array name="color_values">
+        <item>green</item>
+        <item>red</item>
+        <item>blue</item>
+        <item>yellow</item>
+        <item>orange</item>
+        <item>purple</item>
+        <item>pink</item>
+    </string-array>
+
+    <string-array name="export_methods_values">
+        <item>auto</item>
+        <item>disk</item>
+        <item>memory</item>
+    </string-array>
+</resources>

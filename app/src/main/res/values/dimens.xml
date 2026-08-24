@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="title_text_size">18sp</dimen>
+    <dimen name="adapter_text_size">@dimen/title_text_size</dimen>
+    <dimen name="image_button_size">40dp</dimen>
+    <dimen name="volume_operation_horizontal_gap">20dp</dimen>
+    <dimen name="volume_operation_vertical_gap">20dp</dimen>
+    <dimen name="volume_operation_button_height">40dp</dimen>
+    <dimen name="volume_operation_button_horizontal_margin">90dp</dimen>
+    <dimen name="details_text_size">10sp</dimen>
+    <dimen name="dialog_horizontal_padding">30dp</dimen>
+    <dimen name="dialog_padding_top">10dp</dimen>
+    <dimen name="dialog_text_size">16sp</dimen>
+    <dimen name="title_file_name_text_size">20sp</dimen>
+    <dimen name="selectable_row_vertical_padding">10dp</dimen>
+</resources>

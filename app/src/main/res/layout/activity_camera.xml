@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".CameraActivity"
+    android:background="@color/fullScreenBackgroundColor">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/camera_preview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_centerInParent="true"/>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="20dp">
+
+        <ImageButton
+            android:id="@+id/image_capture_mode"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/icon_high_quality"
+            android:background="#00000000"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/image_ratio"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <ImageButton
+            android:id="@+id/image_ratio"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/icon_aspect_ratio"
+            android:background="#00000000"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/image_timer"
+            app:layout_constraintStart_toEndOf="@id/image_capture_mode"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/image_timer"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/icon_timer_off"
+            android:background="#00000000"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/image_flash"
+            app:layout_constraintStart_toEndOf="@id/image_ratio"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/image_flash"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/icon_flash_auto"
+            android:background="#00000000"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/image_timer"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:id="@+id/text_timer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="100sp"
+        android:layout_centerInParent="true"
+        android:visibility="gone"/>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="30dp">
+
+        <ImageButton
+            android:id="@+id/image_mode_switch"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/icon_video"
+            android:background="#00000000"
+            android:scaleType="fitCenter"
+            android:layout_alignEnd="@id/layout_record_buttons"
+            android:layout_marginEnd="120dp"
+            android:layout_centerVertical="true"/>
+
+        <RelativeLayout
+            android:id="@+id/layout_record_buttons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true">
+
+            <ImageView
+                android:id="@+id/record_video_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/record_video_button"
+                android:visibility="gone"/>
+
+            <sushi.hardcore.droidfs.widgets.TakePhotoButton
+                android:id="@+id/take_photo_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/take_photo_button"/>
+
+        </RelativeLayout>
+
+        <ImageButton
+            android:id="@+id/image_camera_switch"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/icon_camera_front"
+            android:background="#00000000"
+            android:scaleType="fitCenter"
+            android:layout_alignStart="@id/layout_record_buttons"
+            android:layout_marginStart="120dp"
+            android:layout_centerVertical="true"/>
+
+    </RelativeLayout>
+
+</RelativeLayout>

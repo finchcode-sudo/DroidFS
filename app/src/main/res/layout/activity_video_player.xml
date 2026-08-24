@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fullScreenBackgroundColor">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <sushi.hardcore.droidfs.widgets.DoubleTapPlayerView
+            android:id="@+id/video_player"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:show_shuffle_button="true"
+            app:show_buffering="always"
+            app:animation_enabled="false"
+            app:repeat_toggle_modes="all|one" />
+
+        <sushi.hardcore.droidfs.widgets.DoubleTapOverlay
+            android:id="@+id/double_tap_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="invisible"/>
+
+    </FrameLayout>
+
+    <RelativeLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="20dp">
+
+        <TextView
+            android:id="@+id/text_file_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textSize="@dimen/title_file_name_text_size"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/rotate_button"
+            android:layout_centerVertical="true"/>
+
+        <ImageButton
+            android:id="@+id/rotate_button"
+            style="@style/ExoMediaButton"
+            android:src="@drawable/icon_screen_rotation"
+            app:tint="@color/neutralIconTint"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"/>
+
+    </RelativeLayout>
+
+</RelativeLayout>

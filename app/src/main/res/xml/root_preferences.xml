@@ -1,0 +1,124 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory android:title="@string/theme">
+
+        <ListPreference
+            android:defaultValue="green"
+            android:entries="@array/color_names"
+            android:entryValues="@array/color_values"
+            android:key="color"
+            android:title="@string/theme_color"
+            android:summary="@string/theme_color_summary"
+            android:icon="@drawable/icon_palette"/>
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/icon_night"
+            android:key="black_theme"
+            android:title="@string/black_theme"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/explorer">
+
+        <ListPreference
+            app:defaultValue="name"
+            app:entries="@array/sort_orders_entries"
+            app:entryValues="@array/sort_orders_values"
+            app:key="sort_order"
+            android:title="@string/settings_title_sort_order"
+            android:icon="@drawable/icon_sort"/>
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            app:icon="@drawable/icon_folder"
+            android:key="folders_first"
+            android:title="@string/folders_first"
+            android:summary="@string/folders_first_summary"/>
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/icon_image"
+            android:key="thumbnails"
+            android:title="@string/thumbnails"
+            android:summary="@string/thumbnails_summary"/>
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            app:icon="@drawable/icon_folder_search"
+            android:key="map_folders"
+            android:title="@string/map_folders"
+            android:summary="@string/map_folders_summary"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/ux">
+
+        <SwitchPreferenceCompat
+            android:title="@string/auto_fit_title"
+            android:summary="@string/auto_fit_summary"
+            android:key="autoFit"
+            android:defaultValue="false"
+            android:icon="@drawable/icon_screen_rotation"/>
+
+        <SwitchPreferenceCompat
+            android:title="@string/password_fallback"
+            android:summary="@string/password_fallback_summary"
+            android:key="passwordFallback"
+            android:defaultValue="true"
+            android:icon="@drawable/icon_password"/>
+
+        <SwitchPreferenceCompat
+            android:title="@string/pin_passwords_title"
+            android:summary="@string/pin_passwords_summary"
+            android:key="pin_passwords"
+            android:defaultValue="false"
+            android:icon="@drawable/icon_num_pad"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/unsafe_features">
+
+        <Preference
+            android:title="@string/manage_unsafe_features"
+            android:summary="@string/manage_unsafe_features_summary"
+            android:icon="@drawable/icon_warning"
+            android:fragment="sushi.hardcore.droidfs.SettingsActivity$UnsafeFeaturesSettingsFragment"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/debug">
+
+        <Preference
+            android:key="logcat"
+            android:title="Logcat"
+            android:summary="View the DroidFS logcat"
+            android:icon="@drawable/icon_debug"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/about">
+
+        <Preference
+            android:title="@string/github"
+            android:summary="@string/github_summary"
+            android:icon="@drawable/icon_github">
+            <intent android:action="android.intent.action.VIEW" android:data="https://github.com/finchcode-sudo/DroidFS"/>
+        </Preference>
+
+        <Preference
+            android:title="@string/gitea"
+            android:summary="@string/gitea_summary"
+            android:icon="@drawable/icon_gitea">
+            <intent android:action="android.intent.action.VIEW" android:data="https://forge.chapril.org/hardcoresushi/DroidFS"/>
+        </Preference>
+
+        <Preference
+            android:icon="@drawable/icon_info"
+            android:title="@string/version"
+            android:summary="@string/versionName"/> <!--added by gradle at build time-->
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

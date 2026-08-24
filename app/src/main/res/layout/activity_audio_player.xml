@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:gravity="center_vertical"
+    android:background="@color/fullScreenBackgroundColor"
+    android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/music_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:textSize="@dimen/title_text_size"
+            android:padding="10dp"/>
+
+        <androidx.media3.ui.PlayerControlView
+            android:id="@+id/audio_controller"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:controller_layout_id="@layout/audio_exo_player_control_view"
+            app:show_timeout="0"
+            app:show_shuffle_button="true"
+            app:repeat_toggle_modes="all|one"/>
+
+</LinearLayout>

@@ -1,0 +1,12 @@
+name: Fix CryFS Submodule
+on: workflow_dispatch
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Check submodule status
+        run: git submodule status
