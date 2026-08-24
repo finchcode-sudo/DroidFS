@@ -1,17 +1,26 @@
 package sushi.hardcore.droidfs.content_providers
 
 import android.content.Context
+import android.content.res.AssetFileDescriptor
 import android.database.Cursor
 import android.database.MatrixCursor
+import android.graphics.Bitmap
+import android.graphics.Point
 import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.DocumentsProvider
 import android.util.Log
 import android.webkit.MimeTypeMap
-import androidx.preference.PreferenceManager
+import coil3.BitmapImage
+import coil3.request.ImageRequest
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import sushi.hardcore.droidfs.BuildConfig
 import sushi.hardcore.droidfs.EncryptedFileProvider
+import sushi.hardcore.droidfs.FileTypes
 import sushi.hardcore.droidfs.R
 import sushi.hardcore.droidfs.VolumeData
 import sushi.hardcore.droidfs.VolumeManager
@@ -51,13 +60,15 @@ class VolumeProvider: DocumentsProvider() {
     private val usfExpose by usfExposeDelegate
     private val usfSafWriteDelegate = AndroidUtils.LiveBooleanPreference("usf_saf_write", false)
     private val usfSafWrite by usfSafWriteDelegate
+    private val thumbnailsDelegate = AndroidUtils.LiveBooleanPreference("thumbnails", true)
+    private val thumbnailsEnabled by thumbnailsDelegate
     private lateinit var volumeManager: VolumeManager
     private val volumes = HashMap<String, Pair<Int, VolumeData>>()
     private lateinit var encryptedFileProvider: EncryptedFileProvider
 
     override fun onCreate(): Boolean {
         val context = (context ?: return false)
-        AndroidUtils.LiveBooleanPreference.init(context, usfExposeDelegate, usfSafWriteDelegate)
+        AndroidUtils.LiveBooleanPreference.init(context, usfExposeDelegate, usfSafWriteDelegate, thumbnailsDelegate)
         volumeManager = (context.applicationContext as VolumeManagerApp).volumeManager
         encryptedFileProvider = EncryptedFileProvider(context)
         return true
@@ -122,6 +133,9 @@ class VolumeProvider: DocumentsProvider() {
     private fun addDocumentRow(cursor: MatrixCursor, volumeData: VolumeData, documentId: String, name: String, stat: Stat) {
         val isDirectory = stat.type == Stat.S_IFDIR
         var flags = 0
+        if (thumbnailsEnabled && !isDirectory && (FileTypes.isImage(name) || FileTypes.isVideo(name))) {
+            flags = flags or DocumentsContract.Document.FLAG_SUPPORTS_THUMBNAIL
+        }
         if (usfSafWrite && volumeData.canWrite(context!!.filesDir.path)) {
             flags = flags or DocumentsContract.Document.FLAG_SUPPORTS_DELETE or DocumentsContract.Document.FLAG_SUPPORTS_RENAME
             if (isDirectory) {
@@ -217,8 +231,7 @@ class VolumeProvider: DocumentsProvider() {
         val result = encryptedFileProvider.openFile(
             lazyExportedFile,
             mode,
-            document.encryptedVolume,
-            volumeManager.getCoroutineScope(document.volumeId),
+            volumeManager.getVolumeResources(document.volumeId)!!,
             true,
             usfSafWrite,
         )
@@ -228,6 +241,31 @@ class VolumeProvider: DocumentsProvider() {
             else -> result.second.log()
         }
         return null
+    }
+
+    override fun openDocumentThumbnail(
+        documentId: String,
+        sizeHint: Point,
+        signal: CancellationSignal?
+    ): AssetFileDescriptor? {
+        if (!usfExpose || !thumbnailsEnabled) { return null }
+        val document = parseDocumentId(documentId) ?: return null
+
+        val image = runBlocking {
+            volumeManager.getImageLoader(document.volumeId).execute(
+                ImageRequest.Builder(context!!).data(document.path).size(sizeHint.x, sizeHint.y).build()
+            )
+        }.image
+        val bitmap = (image as? BitmapImage)?.bitmap ?: return null
+
+        val pipe = ParcelFileDescriptor.createPipe()
+        @OptIn(DelicateCoroutinesApi::class)
+        GlobalScope.launch {
+            ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            }
+        }
+        return AssetFileDescriptor(pipe[0], 0, AssetFileDescriptor.UNKNOWN_LENGTH)
     }
 
     override fun createDocument(

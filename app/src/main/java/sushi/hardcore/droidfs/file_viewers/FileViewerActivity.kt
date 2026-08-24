@@ -1,16 +1,13 @@
 package sushi.hardcore.droidfs.file_viewers
 
-import android.os.Build
+import android.graphics.Color
 import android.os.Bundle
-import android.view.View
-import android.view.WindowManager
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -25,9 +22,8 @@ import sushi.hardcore.droidfs.explorers.ExplorerElement
 import sushi.hardcore.droidfs.filesystems.EncryptedVolume
 import sushi.hardcore.droidfs.util.PathUtils
 import sushi.hardcore.droidfs.util.finishOnClose
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 
-abstract class FileViewerActivity(private val fullscreen: Boolean = false): BaseActivity() {
+abstract class FileViewerActivity: BaseActivity() {
 
     class FileViewerViewModel : ViewModel() {
         val playlist = mutableListOf<ExplorerElement>()
@@ -35,39 +31,30 @@ abstract class FileViewerActivity(private val fullscreen: Boolean = false): Base
         var filePath: String? = null
     }
 
+    protected open val blackBackground: Boolean = false
     protected lateinit var encryptedVolume: EncryptedVolume
+    protected val volumeId: Int by lazy { intent.getIntExtra("volumeId", -1) }
     private lateinit var originalParentPath: String
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
     private val playlistMutex = Mutex()
     protected val fileViewerViewModel: FileViewerViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
-        if (fullscreen) {
-            setTheme(R.style.Theme_AppCompat_NoActionBar)
-            supportActionBar?.hide()
-            edgeToEdge()
-            windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
-        }
         super.onCreate(savedInstanceState)
+        windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+        if (blackBackground) {
+            window.decorView.setBackgroundColor(Color.BLACK)
+            windowInsetsController.isAppearanceLightStatusBars = false
+            windowInsetsController.isAppearanceLightNavigationBars = false
+        }
         if (fileViewerViewModel.filePath == null) {
             fileViewerViewModel.filePath = intent.getStringExtra("path")!!
         }
         originalParentPath = PathUtils.getParentPath(fileViewerViewModel.filePath!!)
-        val volume = (application as VolumeManagerApp).volumeManager.getVolume(
-            intent.getIntExtra("volumeId", -1)
-        )
-        if (volume == null) {
-            // The volume is no longer open (e.g. the app process was killed in the
-            // background and this activity was re-created from Recents). There is
-            // nothing we can do here, so just close this activity instead of crashing.
-            finish()
-            return
-        }
-        encryptedVolume = volume
+        encryptedVolume = (application as VolumeManagerApp).volumeManager.getVolume(
+            volumeId
+        )!!
         finishOnClose(encryptedVolume)
         viewFile()
     }
@@ -80,33 +67,23 @@ abstract class FileViewerActivity(private val fullscreen: Boolean = false): Base
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 
-    protected fun edgeToEdge() {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-        enableEdgeToEdge()
-    }
-
     abstract fun getFileType(): String
     abstract fun viewFile()
 
     protected fun loadWholeFile(path: String, fileSize: Long? = null, callback: (ByteArray) -> Unit) {
         lifecycleScope.launch(Dispatchers.IO) {
-            val result = encryptedVolume.loadWholeFile(path, size = fileSize)
+            val (fileBytes, errorCode) = encryptedVolume.loadWholeFile(path, size = fileSize)
             if (isActive) {
                 withContext(Dispatchers.Main) {
-                    if (result.second == 0) {
-                        callback(result.first!!)
+                    if (errorCode == 0) {
+                        callback(fileBytes!!)
                     } else {
-                        val dialog = CustomAlertDialogBuilder(this@FileViewerActivity, theme)
+                        MaterialAlertDialogBuilder(this@FileViewerActivity)
                             .setTitle(R.string.error)
                             .setCancelable(false)
                             .setPositiveButton(R.string.ok) { _, _ -> goBackToExplorer() }
-                        when (result.second) {
-                            1 -> dialog.setMessage(R.string.get_size_failed)
-                            2 -> dialog.setMessage(R.string.outofmemoryerror_msg)
-                            3 -> dialog.setMessage(R.string.read_file_failed)
-                            4 -> dialog.setMessage(R.string.io_error)
-                        }
-                        dialog.show()
+                            .setMessage(EncryptedVolume.loadWholeFileErrorToString(this@FileViewerActivity, errorCode))
+                            .show()
                     }
                 }
             }

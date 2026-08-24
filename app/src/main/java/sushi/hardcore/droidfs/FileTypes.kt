@@ -5,13 +5,7 @@ import java.io.File
 object FileTypes {
     private val FILE_EXTENSIONS = mapOf(
         Pair("image", listOf("png", "jpg", "jpeg", "gif", "avif", "webp", "bmp", "heic")),
-        Pair("video", listOf(
-    "mp4", "webm", "mkv", "mov", "m4v",
-    "avi", "flv", "ts", "m2ts", "mts",
-    "3gp", "3g2", "ogv", "wmv", "asf",
-    "vob", "mpg", "mpeg", "m1v", "m2v",
-    "divx", "f4v", "mxf"
-)),
+        Pair("video", listOf("mp4", "webm", "mkv", "mov", "m4v")),
         Pair("audio", listOf("mp3", "ogg", "m4a", "wav", "flac", "opus")),
         Pair("pdf", listOf("pdf")),
         Pair("text", listOf(

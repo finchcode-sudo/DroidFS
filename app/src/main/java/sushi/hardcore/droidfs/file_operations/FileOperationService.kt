@@ -13,7 +13,6 @@ import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
@@ -24,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +36,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import sushi.hardcore.droidfs.BaseActivity
 import sushi.hardcore.droidfs.Constants
-import sushi.hardcore.droidfs.NotificationBroadcastReceiver
 import sushi.hardcore.droidfs.R
 import sushi.hardcore.droidfs.VolumeManager
 import sushi.hardcore.droidfs.VolumeManagerApp
@@ -47,7 +46,6 @@ import sushi.hardcore.droidfs.util.AndroidUtils
 import sushi.hardcore.droidfs.util.ObjRef
 import sushi.hardcore.droidfs.util.PathUtils
 import sushi.hardcore.droidfs.util.Wiper
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 import java.io.File
 import java.io.FileNotFoundException
 import kotlin.coroutines.resume
@@ -91,7 +89,7 @@ class FileOperationService : Service() {
          */
         fun bind(activity: BaseActivity, onBound: (FileOperationService) -> Unit) {
             val helper = AndroidUtils.NotificationPermissionHelper(activity)
-            lateinit var service: FileOperationService
+            var service: FileOperationService? = null
             val serviceConnection = object : ServiceConnection {
                 override fun onServiceConnected(className: ComponentName, binder: IBinder) {
                     onBound((binder as FileOperationService.LocalBinder).getService().also {
@@ -106,7 +104,7 @@ class FileOperationService : Service() {
                     activity.unbindService(serviceConnection)
                     // Could have been more efficient with a LinkedHashMap but the JDK implementation doesn't allow
                     // to access the latest element in O(1) unless using reflection
-                    service.notificationPermissionHelpers.removeAll { it.activity == activity }
+                    service?.notificationPermissionHelpers?.removeAll { it.activity == activity }
                 }
             })
             activity.bindService(
@@ -127,7 +125,8 @@ class FileOperationService : Service() {
     private val notifications = HashMap<Int, NotificationCompat.Builder>()
     private var foregroundNotificationId = -1
     private val tasks = HashMap<Int, Job>()
-    private var newTaskId = 1
+    // notification ID 1 is reserved for KeepAliveService
+    private var newTaskId = 2
     private var pendingTask: PendingTask<*>? = null
 
     override fun onCreate() {
@@ -137,11 +136,15 @@ class FileOperationService : Service() {
     override fun onBind(p0: Intent?): IBinder = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startPendingTask { id, notification ->
-            // on service start, the pending task is the foreground task
-            setForeground(id, notification)
+        if (intent?.action == ACTION_CANCEL) {
+            cancelOperation(intent.getIntExtra("taskId", -1))
+        } else {
+            startPendingTask { id, notification ->
+                // on service start, the pending task is the foreground task
+                setForeground(id, notification)
+            }
+            isStarted = true
         }
-        isStarted = true
         return START_NOT_STICKY
     }
 
@@ -197,14 +200,11 @@ class FileOperationService : Service() {
             .addAction(NotificationCompat.Action(
                 R.drawable.icon_close,
                 getString(R.string.cancel),
-                PendingIntent.getBroadcast(
+                PendingIntent.getService(
                     this,
                     newTaskId,
-                    Intent(this, NotificationBroadcastReceiver::class.java).apply {
-                        putExtra("bundle", Bundle().apply {
-                            putBinder("binder", LocalBinder())
-                            putInt("taskId", newTaskId)
-                        })
+                    Intent(this, FileOperationService::class.java).apply {
+                        putExtra("taskId", newTaskId)
                         action = ACTION_CANCEL
                     },
                     PendingIntent.FLAG_IMMUTABLE
@@ -314,7 +314,7 @@ class FileOperationService : Service() {
                         if (granted) {
                             processPendingTask()
                         } else {
-                            CustomAlertDialogBuilder(activity, activity.theme)
+                            MaterialAlertDialogBuilder(activity)
                                 .setTitle(R.string.warning)
                                 .setMessage(R.string.notification_denied_msg)
                                 .setPositiveButton(R.string.settings) { _, _ ->
@@ -418,6 +418,7 @@ class FileOperationService : Service() {
         val srcEncryptedVolume = getEncryptedVolume(srcVolumeId)
         return volumeTask(R.string.file_op_copy_msg, items.size, volumeId) { taskId, encryptedVolume ->
             var failedItem: String? = null
+            val toEvict = HashSet<String>()
             for (i in items.indices) {
                 yield()
                 if (items[i].isDirectory) {
@@ -426,14 +427,20 @@ class FileOperationService : Service() {
                             failedItem = items[i].srcPath
                         }
                     }
-                } else if (!copyFile(encryptedVolume, items[i].srcPath, items[i].dstPath!!, srcEncryptedVolume)) {
-                    failedItem = items[i].srcPath
+                } else {
+                    if (!copyFile(encryptedVolume, items[i].srcPath, items[i].dstPath!!, srcEncryptedVolume)) {
+                        failedItem = items[i].srcPath
+                    }
+                    toEvict.add(items[i].dstPath!!)
                 }
                 if (failedItem == null) {
                     updateNotificationProgress(taskId, i+1, items.size)
                 } else {
                     break
                 }
+            }
+            if (toEvict.isNotEmpty()) {
+                volumeManger.evictImageCache(volumeId) { it in toEvict }
             }
             failedItem
         }
@@ -443,11 +450,15 @@ class FileOperationService : Service() {
         return volumeTask(R.string.file_op_move_msg, toMove.size, volumeId) { taskId, encryptedVolume ->
             val total = toMove.size+toClean.size
             var failedItem: String? = null
+            val toEvict = HashSet<String>()
             for ((i, item) in toMove.withIndex()) {
                 if (!encryptedVolume.rename(item.srcPath, item.dstPath!!)) {
                     failedItem = item.srcPath
                     break
                 } else {
+                    if (!item.isDirectory) {
+                        toEvict.add(item.dstPath!!)
+                    }
                     updateNotificationProgress(taskId, i+1, total)
                 }
             }
@@ -461,12 +472,16 @@ class FileOperationService : Service() {
                     }
                 }
             }
+            if (toEvict.isNotEmpty()) {
+                volumeManger.evictImageCache(volumeId) { it in toEvict }
+            }
             failedItem
         }
     }
 
     private suspend fun importFilesFromUris(
         encryptedVolume: EncryptedVolume,
+        volumeId: Int,
         dstPaths: List<String>,
         uris: List<Uri>,
         taskId: Int,
@@ -484,15 +499,19 @@ class FileOperationService : Service() {
             if (failedIndex == -1) {
                 updateNotificationProgress(taskId, i+1, dstPaths.size)
             } else {
+                val importedSet = dstPaths.subList(0, i + 1).toHashSet()
+                volumeManger.evictImageCache(volumeId) { it in importedSet }
                 return uris[failedIndex].toString()
             }
         }
+        val dstSet = dstPaths.toHashSet()
+        volumeManger.evictImageCache(volumeId) { it in dstSet }
         return null
     }
 
     suspend fun importFilesFromUris(volumeId: Int, dstPaths: List<String>, uris: List<Uri>): TaskResult<out String?> {
         return volumeTask(R.string.file_op_import_msg, dstPaths.size, volumeId) { taskId, encryptedVolume ->
-            importFilesFromUris(encryptedVolume, dstPaths, uris, taskId)
+            importFilesFromUris(encryptedVolume, volumeId, dstPaths, uris, taskId)
         }
     }
 
@@ -545,7 +564,7 @@ class FileOperationService : Service() {
                 }
             }
             if (failedItem == null) {
-                failedItem = importFilesFromUris(encryptedVolume, dstFiles, srcUris, taskId)
+                failedItem = importFilesFromUris(encryptedVolume, volumeId, dstFiles, srcUris, taskId)
             }
             failedItem
         }, srcUris)

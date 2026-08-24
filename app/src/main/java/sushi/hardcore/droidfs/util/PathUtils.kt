@@ -11,9 +11,8 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import sushi.hardcore.droidfs.R
-import sushi.hardcore.droidfs.Theme
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 import java.io.File
 import java.text.DecimalFormat
 import kotlin.math.log10
@@ -69,6 +68,19 @@ object PathUtils {
         // char of the child after the prefix must be '/'. Prevents "/foobar" from
         // being treated as a child of "/foo".
         return parentPath.endsWith(SEPARATOR) || childPath[parentPath.length] == SEPARATOR
+    }
+
+    fun normalizePath(path: String): String {
+        val absolute = path.startsWith(SEPARATOR)
+        val stack = mutableListOf<String>()
+        for (component in path.splitToSequence(SEPARATOR)) {
+            when (component) {
+                "", "." -> {}
+                ".." -> if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+                else -> stack.add(component)
+            }
+        }
+        return stack.joinToString(SEPARATOR.toString(), if (absolute) SEPARATOR.toString() else "")
     }
 
     fun getFilenameFromURI(context: Context, uri: Uri): String? {
@@ -136,10 +148,11 @@ object PathUtils {
             Log.d(PATH_RESOLVER_TAG, "Volume Id: $volumeId")
             val volumePath = getVolumePath(volumeId ?: return null, context)
             Log.d(PATH_RESOLVER_TAG, "Volume Path: $volumePath")
+            if (volumePath == null) return null
             val documentPath = if (split.size >= 2 && split[1] != null) split[1]!! else File.separator
             Log.d(PATH_RESOLVER_TAG, "Document Path: $documentPath")
             return if (documentPath.isNotEmpty()) {
-                pathJoin(volumePath!!, documentPath)
+                pathJoin(volumePath, documentPath)
             } else volumePath
         } else if ("file".equals(treeUri.scheme, ignoreCase = true)) {
             return treeUri.path
@@ -250,11 +263,11 @@ object PathUtils {
         return rootDirectory.delete()
     }
 
-     fun safePickDirectory(directoryPicker: ActivityResultLauncher<Uri?>, context: Context, theme: Theme) {
+     fun safePickDirectory(directoryPicker: ActivityResultLauncher<Uri?>, context: Context) {
         try {
             directoryPicker.launch(null)
-        } catch (e: ActivityNotFoundException) {
-            CustomAlertDialogBuilder(context, theme)
+        } catch (_: ActivityNotFoundException) {
+            MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.error)
                 .setMessage(R.string.open_tree_failed)
                 .setPositiveButton(R.string.ok, null)

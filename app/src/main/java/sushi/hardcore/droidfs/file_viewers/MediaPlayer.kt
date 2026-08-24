@@ -12,18 +12,18 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.DefaultExtractorsFactory
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import sushi.hardcore.droidfs.Constants
 import sushi.hardcore.droidfs.R
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 import java.io.File
 
 @OptIn(UnstableApi::class)
-abstract class MediaPlayer(fullscreen: Boolean): FileViewerActivity(fullscreen) {
+abstract class MediaPlayer: FileViewerActivity() {
+    override val blackBackground: Boolean = true
     private lateinit var player: ExoPlayer
 
     override fun viewFile() {
-        supportActionBar?.hide()
         initializePlayer()
         refreshFileName()
     }
@@ -57,7 +57,7 @@ abstract class MediaPlayer(fullscreen: Boolean): FileViewerActivity(fullscreen) 
                 onVideoSizeChanged(videoSize.width, videoSize.height)
             }
             override fun onPlayerError(error: PlaybackException) {
-                CustomAlertDialogBuilder(this@MediaPlayer, theme)
+                MaterialAlertDialogBuilder(this@MediaPlayer)
                         .setTitle(R.string.error)
                         .setMessage(getString(R.string.playing_failed, error.errorCodeName))
                         .setCancelable(false)

@@ -3,7 +3,7 @@
 
     <PreferenceCategory android:title="@string/theme">
 
-        <ListPreference
+        <sushi.hardcore.droidfs.widgets.MaterialListPreference
             android:defaultValue="green"
             android:entries="@array/color_names"
             android:entryValues="@array/color_values"
@@ -16,13 +16,14 @@
             android:defaultValue="false"
             android:icon="@drawable/icon_night"
             android:key="black_theme"
-            android:title="@string/black_theme"/>
+            android:title="@string/black_theme"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
 
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/explorer">
 
-        <ListPreference
+        <sushi.hardcore.droidfs.widgets.MaterialListPreference
             app:defaultValue="name"
             app:entries="@array/sort_orders_entries"
             app:entryValues="@array/sort_orders_values"
@@ -35,46 +36,60 @@
             app:icon="@drawable/icon_folder"
             android:key="folders_first"
             android:title="@string/folders_first"
-            android:summary="@string/folders_first_summary"/>
+            android:summary="@string/folders_first_summary"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
 
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:icon="@drawable/icon_image"
             android:key="thumbnails"
             android:title="@string/thumbnails"
-            android:summary="@string/thumbnails_summary"/>
+            android:summary="@string/thumbnails_summary"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
 
         <SwitchPreferenceCompat
             android:defaultValue="true"
             app:icon="@drawable/icon_folder_search"
             android:key="map_folders"
             android:title="@string/map_folders"
-            android:summary="@string/map_folders_summary"/>
+            android:summary="@string/map_folders_summary"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
 
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/ux">
 
         <SwitchPreferenceCompat
+            android:title="@string/propose_wipe_imported_files"
+            android:summary="@string/propose_wipe_imported_files_summary"
+            android:key="propose_wipe_imported_files"
+            android:defaultValue="true"
+            android:icon="@drawable/icon_wipe"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
+
+        <SwitchPreferenceCompat
             android:title="@string/auto_fit_title"
             android:summary="@string/auto_fit_summary"
             android:key="autoFit"
             android:defaultValue="false"
-            android:icon="@drawable/icon_screen_rotation"/>
+            android:icon="@drawable/icon_screen_rotation"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
 
         <SwitchPreferenceCompat
             android:title="@string/password_fallback"
             android:summary="@string/password_fallback_summary"
             android:key="passwordFallback"
             android:defaultValue="true"
-            android:icon="@drawable/icon_password"/>
+            android:icon="@drawable/icon_password"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
 
         <SwitchPreferenceCompat
             android:title="@string/pin_passwords_title"
             android:summary="@string/pin_passwords_summary"
             android:key="pin_passwords"
             android:defaultValue="false"
-            android:icon="@drawable/icon_num_pad"/>
+            android:icon="@drawable/icon_num_pad"
+            app:widgetLayout="@layout/preference_widget_material_switch"/>
 
     </PreferenceCategory>
 
@@ -92,8 +107,8 @@
 
         <Preference
             android:key="logcat"
-            android:title="Logcat"
-            android:summary="View the DroidFS logcat"
+            android:title="@string/logcat"
+            android:summary="@string/logcat_summary"
             android:icon="@drawable/icon_debug"/>
 
     </PreferenceCategory>
@@ -104,7 +119,7 @@
             android:title="@string/github"
             android:summary="@string/github_summary"
             android:icon="@drawable/icon_github">
-            <intent android:action="android.intent.action.VIEW" android:data="https://github.com/finchcode-sudo/DroidFS"/>
+            <intent android:action="android.intent.action.VIEW" android:data="https://github.com/hardcore-sushi/DroidFS"/>
         </Preference>
 
         <Preference

@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import sushi.hardcore.droidfs.Constants.DEFAULT_VOLUME_KEY
 import sushi.hardcore.droidfs.adapters.VolumeAdapter
@@ -24,8 +25,6 @@ import sushi.hardcore.droidfs.file_operations.FileOperationService
 import sushi.hardcore.droidfs.file_operations.TaskResult
 import sushi.hardcore.droidfs.util.IntentUtils
 import sushi.hardcore.droidfs.util.PathUtils
-import sushi.hardcore.droidfs.util.UIUtils
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 import sushi.hardcore.droidfs.widgets.EditTextDialog
 import java.io.File
 
@@ -60,8 +59,9 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setSupportActionBar(findViewById(R.id.toolbar))
         if (sharedPrefs.getBoolean("applicationFirstOpening", true)) {
-            CustomAlertDialogBuilder(this, theme)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.warning)
                 .setMessage(R.string.usf_home_warning_msg)
                 .setCancelable(false)
@@ -201,7 +201,7 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
                             break
                         }
                     }
-                    CustomAlertDialogBuilder(this, theme)
+                    MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.warning)
                         .setView(dialogBinding.root)
                         .setPositiveButton(R.string.forget_only) { _, _ ->
@@ -300,11 +300,11 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
                 val volume = volumeAdapter.volumes[selectedVolumePosition!!]
                 if (volume.isHidden) {
                     (application as VolumeManagerApp).isStartingExternalApp = true
-                    PathUtils.safePickDirectory(pickDirectory, this, theme)
+                    PathUtils.safePickDirectory(pickDirectory, this)
                 } else {
                     val hiddenVolumeFile = File(VolumeData.getHiddenVolumeFullPath(filesDir.path, volume.shortName))
                     if (hiddenVolumeFile.exists()) {
-                        CustomAlertDialogBuilder(this, theme)
+                        MaterialAlertDialogBuilder(this)
                             .setTitle(R.string.error)
                             .setMessage(R.string.hidden_volume_already_exists)
                             .setPositiveButton(R.string.ok, null)
@@ -344,11 +344,7 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_activity, menu)
-        val settingsVisible = !explorerRouter.pickMode && !explorerRouter.dropMode
-        menu.findItem(R.id.settings).isVisible = settingsVisible
-        if (settingsVisible) {
-            UIUtils.getMenuIconNeutralTint(this, menu).applyTo(R.id.settings, R.drawable.icon_settings)
-        }
+        menu.findItem(R.id.settings).isVisible = !explorerRouter.pickMode && !explorerRouter.dropMode
         val isSelecting = volumeAdapter.selectedItems.isNotEmpty()
         menu.findItem(R.id.select_all).isVisible = isSelecting
         menu.findItem(R.id.lock).isVisible = isSelecting && volumeAdapter.selectedItems.any {
@@ -386,7 +382,7 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
         unselect(selectedVolumePosition!!)
         val dstDocumentFile = DocumentFile.fromTreeUri(this, uri)
         if (dstDocumentFile == null) {
-            CustomAlertDialogBuilder(this, theme)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.error)
                 .setMessage(R.string.path_error)
                 .setPositiveButton(R.string.ok, null)
@@ -437,13 +433,13 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
                     }
                 }
                 TaskResult.State.FAILED -> {
-                    CustomAlertDialogBuilder(this@MainActivity, theme)
+                    MaterialAlertDialogBuilder(this@MainActivity)
                         .setTitle(R.string.error)
                         .setMessage(getString(R.string.copy_failed, result.taskResult.failedItem!!.name))
                         .setPositiveButton(R.string.ok, null)
                         .show()
                 }
-                TaskResult.State.ERROR -> result.taskResult.showErrorAlertDialog(this@MainActivity, theme)
+                TaskResult.State.ERROR -> result.taskResult.showErrorAlertDialog(this@MainActivity)
                 TaskResult.State.CANCELLED -> {}
             }
         }

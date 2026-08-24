@@ -65,8 +65,7 @@ class TemporaryFileProvider : ContentProvider() {
         size: Long,
         volumeId: Int
     ): Uri? {
-        val volume = volumeManager.getVolume(volumeId) ?: return null
-        if (!encryptedFileProvider.exportFile(exportedFile, volume)) {
+        if (!encryptedFileProvider.exportFile(exportedFile, volumeManager.getVolume(volumeId)!!)) {
             return null
         }
         return Uri.withAppendedPath(BASE_URI, UUID.randomUUID().toString()).also {
@@ -110,15 +109,14 @@ class TemporaryFileProvider : ContentProvider() {
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor? {
         files[uri]?.let { file ->
-            val encryptedVolume = volumeManager.getVolume(file.volumeId) ?: run {
+            val volumeResources = volumeManager.getVolumeResources(file.volumeId) ?: run {
                 Log.e(TAG, "Volume closed for $uri")
                 return null
             }
             val result = encryptedFileProvider.openFile(
                 file.file,
                 mode,
-                encryptedVolume,
-                volumeManager.getCoroutineScope(file.volumeId),
+                volumeResources,
                 false,
                 usfSafWrite,
             )

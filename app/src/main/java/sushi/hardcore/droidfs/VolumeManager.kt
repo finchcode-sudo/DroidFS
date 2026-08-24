@@ -1,10 +1,8 @@
 package sushi.hardcore.droidfs
 
 import android.content.Context
+import coil3.ImageLoader
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import sushi.hardcore.droidfs.content_providers.VolumeProvider
 import sushi.hardcore.droidfs.filesystems.EncryptedVolume
 import sushi.hardcore.droidfs.util.Observable
@@ -16,12 +14,11 @@ class VolumeManager(private val context: Context): Observable<VolumeManager.Obse
     }
 
     private var id = 0
-    private val volumes = HashMap<Int, EncryptedVolume>()
+    private val volumes = HashMap<Int, VolumeResources>()
     private val volumesData = HashMap<VolumeData, Int>()
-    private val scopes = HashMap<Int, CoroutineScope>()
 
     fun insert(volume: EncryptedVolume, data: VolumeData): Int {
-        volumes[id] = volume
+        volumes[id] = VolumeResources(volume, context)
         volumesData[data] = id
         observers.forEach { it.onVolumeStateChanged(data) }
         VolumeProvider.notifyRootsChanged(context)
@@ -37,7 +34,23 @@ class VolumeManager(private val context: Context): Observable<VolumeManager.Obse
     }
 
     fun getVolume(id: Int): EncryptedVolume? {
-        return volumes[id]
+        return volumes[id]?.volume
+    }
+
+    fun getVolumeResources(volumeId: Int): VolumeResources? {
+        return volumes[volumeId]
+    }
+
+    fun getCoroutineScope(volumeId: Int): CoroutineScope {
+        return getVolumeResources(volumeId)!!.scope
+    }
+
+    fun getImageLoader(volumeId: Int): ImageLoader {
+        return getVolumeResources(volumeId)!!.imageLoader
+    }
+
+    fun evictImageCache(volumeId: Int, shouldEvict: (String) -> Boolean) {
+        getVolumeResources(volumeId)!!.evictImageCache(shouldEvict)
     }
 
     fun listVolumes(): List<Pair<Int, VolumeData>> {
@@ -46,14 +59,10 @@ class VolumeManager(private val context: Context): Observable<VolumeManager.Obse
 
     fun getVolumeCount() = volumes.size
 
-    fun getCoroutineScope(volumeId: Int): CoroutineScope {
-        return scopes[volumeId] ?: CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes[volumeId] = it }
-    }
-
     fun closeVolume(id: Int) {
-        volumes.remove(id)?.let { volume ->
-            scopes[id]?.cancel()
-            volume.closeVolume()
+        volumes.remove(id)?.let { resources ->
+            resources.destroy()
+            resources.volume.closeVolume()
             volumesData.filter { it.value == id }.forEach { entry ->
                 volumesData.remove(entry.key)
                 observers.forEach { it.onVolumeStateChanged(entry.key) }
@@ -63,9 +72,9 @@ class VolumeManager(private val context: Context): Observable<VolumeManager.Obse
     }
 
     fun closeAll() {
-        volumes.forEach {
-            scopes[it.key]?.cancel()
-            it.value.closeVolume()
+        volumes.values.forEach {
+            it.destroy()
+            it.volume.closeVolume()
         }
         volumes.clear()
         volumesData.clear()

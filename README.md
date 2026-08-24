@@ -6,7 +6,7 @@ For mortals: Encrypted storage compatible with already existing softwares.
 
 <p align="center">
 <img src="https://forge.chapril.org/hardcoresushi/DroidFS/raw/branch/master/fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" height="500">
-<img src="https://forge.chapril.org/hardcoresushi/DroidFS/raw/branch/master/fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" height="500">
+<img src="https://forge.chapril.org/hardcoresushi/DroidFS/raw/branch/master/fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" height="500">
 <img src="https://forge.chapril.org/hardcoresushi/DroidFS/raw/branch/master/fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" height="500">
 </p>
 
@@ -91,6 +91,30 @@ sha256sum <APK file>
 ```
 __Don't install the APK if the checksums don't match!__
 
+<details>
+<summary>APK signing certificate</summary>
+If you prefer to check the certificate's hashes rather than those of the APK files themselves, here they are. But keep in mind that you still need to verify the PGP signature of the message.
+
+```
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+DroidFS APK signing certificate hashes:
+
+SHA-256: 689b029758e6b750e4acc59d442695cea87b59088493a35513d8ae82e106bd6d
+SHA-1: 27505fbad9c4e44339f30938c4f3d072ac8cdebf
+MD5: de0322a47ab87cf86bbc71c3bd49c047
+
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQS2Tv6GzuHQVPCCFxGv44Q0SkXhOgUCan2U/gAKCRCv44Q0SkXh
+OhSAAQDZ8G1/Ue02lI0KGhvRoFijD3BevYEvS0CL29y2aMMjHgEAtmaa71x2SKqx
++oMTyqLELek9BC7ngVpLb0IqajyJnAw=
+=1mxD
+-----END PGP SIGNATURE-----
+```
+</details>
+
 F-Droid APKs should be signed with the F-Droid key. More details [here](https://f-droid.org/docs/Release_Channels_and_Signing_Keys).
 
 # Permissions
@@ -122,5 +146,5 @@ Thanks to these open source projects that DroidFS uses:
 ### Borrowed code:
 - [MaterialFiles](https://github.com/zhanghai/MaterialFiles) for Kotlin natural sorting implementation
 ### Libraries:
-- [Glide](https://github.com/bumptech/glide) to display pictures
+- [Coil](https://coil-kt.github.io/coil) to display pictures
 - [ExoPlayer](https://github.com/google/ExoPlayer) to play media files

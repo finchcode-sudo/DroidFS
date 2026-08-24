@@ -6,21 +6,16 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.recyclerview.widget.RecyclerView
+import coil3.asImage
 import coil3.Image
 import coil3.ImageLoader
-import coil3.imageLoader
 import coil3.load
 import coil3.request.Disposable
-import coil3.request.ImageRequest
-import coil3.video.VideoFrameDecoder
-import coil3.video.preferVideoFrameEmbeddedThumbnailKey
-import coil3.video.videoFramePercent
 import sushi.hardcore.droidfs.FileTypes
 import sushi.hardcore.droidfs.R
 import sushi.hardcore.droidfs.explorers.ExplorerElement
-import sushi.hardcore.droidfs.filesystems.EncryptedFileReaderFileSystem
-import sushi.hardcore.droidfs.filesystems.EncryptedVolume
 import sushi.hardcore.droidfs.filesystems.Stat
 import sushi.hardcore.droidfs.util.PathUtils
 import java.text.DateFormat
@@ -28,7 +23,7 @@ import java.util.Locale
 
 class ExplorerElementAdapter(
     val activity: AppCompatActivity,
-    val encryptedVolume: EncryptedVolume?,
+    val thumbnailsLoader: ImageLoader?,
     private val listener: Listener,
 ) : SelectableAdapter<ExplorerElement>(listener::onSelectionChanged) {
     val dateFormat: DateFormat = DateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.DEFAULT, Locale.getDefault())
@@ -39,18 +34,14 @@ class ExplorerElementAdapter(
         notifyDataSetChanged()
     }
     var isUsingListLayout = true
-    private var thumbnailsLoader: ImageLoader? = null
     var loadThumbnails = true
     private var iconImage: Image? = null
     private var iconVideo: Image? = null
 
     init {
-        if (encryptedVolume != null) {
-            activity.imageLoader.enqueue(ImageRequest.Builder(activity).data(R.drawable.icon_file_image).target { result -> iconImage = result}.build())
-            activity.imageLoader.enqueue(ImageRequest.Builder(activity).data(R.drawable.icon_file_video).target { result -> iconVideo = result}.build())
-            thumbnailsLoader = ImageLoader.Builder(activity).diskCache(null).fileSystem(EncryptedFileReaderFileSystem(encryptedVolume)).components {
-                add(VideoFrameDecoder.Factory())
-            }.build()
+        if (thumbnailsLoader != null) {
+            iconImage = AppCompatResources.getDrawable(activity, R.drawable.icon_file_image)?.asImage()
+            iconVideo = AppCompatResources.getDrawable(activity, R.drawable.icon_file_video)?.asImage()
         }
     }
 
@@ -123,16 +114,15 @@ class ExplorerElementAdapter(
             thumbnailLoadingTask?.dispose()
         }
 
-        private fun setThumbnailOrDefaultIcon(fullPath: String, defaultIconId: Int, placeholder: Image?): Disposable {
+        private fun setThumbnailOrDefaultIcon(fullPath: String, defaultIconId: Int, placeholder: Image?): Disposable? {
             val adapter = (bindingAdapter as ExplorerElementAdapter?)!!
             return if (adapter.loadThumbnails && adapter.thumbnailsLoader != null) {
-                icon.load(fullPath, adapter.thumbnailsLoader!!) {
-                    videoFramePercent(0.1)
-                    preferVideoFrameEmbeddedThumbnailKey(true)
+                icon.load(fullPath, adapter.thumbnailsLoader) {
                     placeholder(placeholder)
                 }
             } else {
-                icon.load(defaultIconId)
+                icon.setImageResource(defaultIconId)
+                null
             }
         }
 
@@ -146,14 +136,17 @@ class ExplorerElementAdapter(
                 FileTypes.isVideo(explorerElement.name) -> {
                     setThumbnailOrDefaultIcon(explorerElement.fullPath, R.drawable.icon_file_video, adapter.iconVideo)
                 }
-                else -> icon.load(
-                    when {
-                        FileTypes.isText(explorerElement.name) -> R.drawable.icon_file_text
-                        FileTypes.isPDF(explorerElement.name) -> R.drawable.icon_file_pdf
-                        FileTypes.isAudio(explorerElement.name) -> R.drawable.icon_file_audio
-                        else -> R.drawable.icon_file_unknown
-                    }
-                )
+                else -> {
+                    icon.setImageResource(
+                        when {
+                            FileTypes.isText(explorerElement.name) -> R.drawable.icon_file_text
+                            FileTypes.isPDF(explorerElement.name) -> R.drawable.icon_file_pdf
+                            FileTypes.isAudio(explorerElement.name) -> R.drawable.icon_file_audio
+                            else -> R.drawable.icon_file_unknown
+                        }
+                    )
+                    null
+                }
             }
         }
     }

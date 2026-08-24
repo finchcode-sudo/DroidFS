@@ -77,7 +77,7 @@
     <string name="unsafe_features">Unsafe Features</string>
     <string name="manage_unsafe_features">Manage unsafe features</string>
     <string name="manage_unsafe_features_summary">Enable/Disable unsafe features</string>
-    <string name="usf_home_warning_msg">DroidFS aims to be as secure as possible. However, security often involves lack of comfort. This is why DroidFS offers you additional unsafe features that you can enable and disable according to your needs.\n\nWarning: this features can be UNSAFE. Do not use them unless you know exactly what you are doing. It is highly recommended to read the documentation before enabling them.</string>
+    <string name="usf_home_warning_msg">DroidFS aims to be as secure as possible. However, security often involves lack of comfort. This is why DroidFS offers you additional unsafe features that you can enable and disable according to your needs.\n\nWarning: these features can be UNSAFE. Do not use them unless you know exactly what you are doing. It is highly recommended to read the documentation before enabling them.</string>
     <string name="see_unsafe_features">See unsafe features</string>
     <string name="open_as">Open as</string>
     <string name="image">Image</string>
@@ -115,8 +115,10 @@
     <string name="picture_save_success">Picture saved to %s</string>
     <string name="picture_save_failed">Failed to save this picture.</string>
     <string name="video_save_success">Video saved to %s</string>
+    <string name="file_collision_question">Another selected file will also be imported as %s. Do you want to overwrite it ?</string>
     <string name="file_overwrite_question">%s already exists, do you want to overwrite it ?</string>
     <string name="dir_overwrite_question">%s already exists, do you want to merge its content ?</string>
+    <string name="rename_into_dir_question">%1$s is an existing directory, do you want to move %2$s inside ?</string>
     <string name="enter_new_name">Enter new name</string>
     <string name="copy_menu_title">Copy</string>
     <string name="move_failed">Move of %s failed.</string>
@@ -273,6 +275,8 @@
     <string name="export_method">Export method</string>
     <string name="export_method_summary">File export method. Used for sharing, external opening and accessing exposed files.</string>
     <string name="debug">Debug</string>
+    <string name="logcat">Logcat</string>
+    <string name="logcat_summary">View the DroidFS logcat</string>
     <string name="logcat_title">DroidFS Logcat</string>
     <string name="logcat_saved">Logcat saved</string>
     <string name="later">Later</string>
@@ -284,10 +288,15 @@
     <string name="usf_background_summary">Don\'t lock volumes when the app goes in background</string>
     <string name="usf_keep_open">Keep volumes open</string>
     <string name="usf_keep_open_summary">Maintain the app always running in the background to keep volumes open</string>
+    <string name="lock_on_screen_lock">Lock volumes when the screen is locked</string>
     <string name="gocryptfs_details">Fast, but doesn\'t hide file sizes and directory structure</string>
     <string name="cryfs_details">Slower, but protects metadata and prevents replacement attacks</string>
     <string name="or">or</string>
     <string name="enter_volume_path">Enter volume path</string>
     <string name="more_options">More options</string>
     <string name="take_photos_repeatedly">Take photos repeatedly</string>
+    <string name="choose_quality">Choose quality:</string>
+    <string name="aspect_ratio">Aspect ratio:</string>
+    <string name="propose_wipe_imported_files">Propose to wipe imported files</string>
+    <string name="propose_wipe_imported_files_summary">After importing files, ask whether to wipe them from the source</string>
 </resources>

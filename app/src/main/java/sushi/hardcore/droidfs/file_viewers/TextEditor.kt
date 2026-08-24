@@ -5,15 +5,13 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuItem
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.addCallback
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.core.view.ViewCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import sushi.hardcore.droidfs.R
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 import java.io.File
 
 class TextEditor: FileViewerActivity() {
@@ -21,7 +19,6 @@ class TextEditor: FileViewerActivity() {
     private lateinit var editor: EditText
     private var changedSinceLastSave = false
     private var wordWrap = true
-    private var isSaving = false
 
     override fun getFileType(): String {
         return "text"
@@ -30,7 +27,6 @@ class TextEditor: FileViewerActivity() {
     override fun viewFile() {
         fileName = File(fileViewerViewModel.filePath!!).name
         title = fileName
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         loadWholeFile(fileViewerViewModel.filePath!!) {
             try {
                 loadLayout(String(it))
@@ -38,7 +34,7 @@ class TextEditor: FileViewerActivity() {
                     checkSaveAndExit()
                 }
             } catch (e: OutOfMemoryError){
-                CustomAlertDialogBuilder(this, theme)
+                MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.error)
                     .setMessage(R.string.outofmemoryerror_msg)
                     .setCancelable(false)
@@ -53,6 +49,10 @@ class TextEditor: FileViewerActivity() {
         } else {
             setContentView(R.layout.activity_text_editor)
         }
+        applyInsets()
+        ViewCompat.requestApplyInsets((findViewById<ViewGroup>(android.R.id.content)))
+        setSupportActionBar(findViewById(R.id.toolbar))
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         editor = findViewById(R.id.text_editor)
         editor.setText(fileContent)
         editor.addTextChangedListener(object: TextWatcher {
@@ -69,44 +69,34 @@ class TextEditor: FileViewerActivity() {
             }
         })
     }
-    private fun save(onComplete: (Boolean) -> Unit) {
-        if (isSaving) return
-        isSaving = true
+    private fun save(): Boolean{
+        var success = false
         val content = editor.text.toString().toByteArray()
-        lifecycleScope.launch {
-            val success = withContext(Dispatchers.IO) {
-                var success = false
-                val fileHandle = encryptedVolume.openFileWriteMode(fileViewerViewModel.filePath!!)
-                if (fileHandle != -1L) {
-                    var offset: Long = 0
-                    while (offset < content.size && encryptedVolume.write(fileHandle, offset, content, offset, content.size.toLong()).also { offset += it } > 0) {}
-                    if (offset == content.size.toLong()){
-                        success = encryptedVolume.truncate(fileViewerViewModel.filePath!!, offset)
-                    }
-                    encryptedVolume.closeFile(fileHandle)
-                }
-                success
+        val fileHandle = encryptedVolume.openFileWriteMode(fileViewerViewModel.filePath!!)
+        if (fileHandle != -1L) {
+            var offset: Long = 0
+            while (offset < content.size && encryptedVolume.write(fileHandle, offset, content, offset, content.size.toLong()).also { offset += it } > 0) {}
+            if (offset == content.size.toLong()){
+                success = encryptedVolume.truncate(fileViewerViewModel.filePath!!, offset)
             }
-            isSaving = false
-            if (success){
-                Toast.makeText(this@TextEditor, getString(R.string.file_saved), Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@TextEditor, getString(R.string.save_failed), Toast.LENGTH_SHORT).show()
-            }
-            onComplete(success)
+            encryptedVolume.closeFile(fileHandle)
         }
+        if (success){
+            Toast.makeText(this, getString(R.string.file_saved), Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, getString(R.string.save_failed), Toast.LENGTH_SHORT).show()
+        }
+        return success
     }
 
     private fun checkSaveAndExit(){
         if (changedSinceLastSave){
-            CustomAlertDialogBuilder(this, theme)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.warning)
                 .setMessage(R.string.ask_save)
                 .setPositiveButton(R.string.save) { _, _ ->
-                    save { success ->
-                        if (success){
-                            goBackToExplorer()
-                        }
+                    if (save()){
+                        goBackToExplorer()
                     }
                 }
                 .setNegativeButton(R.string.discard){ _, _ -> goBackToExplorer()}
@@ -128,11 +118,9 @@ class TextEditor: FileViewerActivity() {
                 checkSaveAndExit()
             }
             R.id.menu_save -> {
-                save { success ->
-                    if (success){
-                        changedSinceLastSave = false
-                        title = fileName
-                    }
+                if (save()){
+                    changedSinceLastSave = false
+                    title = fileName
                 }
             }
             R.id.word_wrap -> {

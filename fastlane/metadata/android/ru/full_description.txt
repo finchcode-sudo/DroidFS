@@ -19,7 +19,7 @@ DroidFS — это альтернативный способ использов�
 Любое разрешение может быть запрещено, если вы не хотите использовать соответствующую функцию.
 
 DroidFS бесплатный, с открытым исходным кодом, репозиторий проекта находится на:
-- GitHub: https://github.com/finchcode-sudo/DroidFS
+- GitHub: https://github.com/hardcore-sushi/DroidFS
 - Gitea проекта Chapril: https://forge.chapril.org/hardcoresushi/DroidFS
 
 <b>Предупреждение!</b>

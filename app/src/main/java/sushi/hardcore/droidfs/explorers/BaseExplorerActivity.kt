@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -48,9 +49,7 @@ import sushi.hardcore.droidfs.file_viewers.VideoPlayer
 import sushi.hardcore.droidfs.filesystems.EncryptedVolume
 import sushi.hardcore.droidfs.filesystems.Stat
 import sushi.hardcore.droidfs.util.PathUtils
-import sushi.hardcore.droidfs.util.UIUtils
 import sushi.hardcore.droidfs.util.finishOnClose
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 import sushi.hardcore.droidfs.widgets.EditTextDialog
 
 open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listener {
@@ -78,7 +77,6 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     private lateinit var linearLayoutManager: LinearLayoutManager
     private var isUsingListLayout = true
     private lateinit var layoutIcon: ImageButton
-    private lateinit var titleText: TextView
     private lateinit var recycler_view_explorer: RecyclerView
     private lateinit var refresher: SwipeRefreshLayout
     private lateinit var loader: ProgressBar
@@ -118,17 +116,13 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         numberOfFilesText = findViewById(R.id.number_of_files_text)
         numberOfFoldersText = findViewById(R.id.number_of_folders_text)
         totalSizeText = findViewById(R.id.total_size_text)
-        supportActionBar?.apply {
-            setDisplayShowCustomEnabled(true)
-            setCustomView(R.layout.action_bar)
-            titleText = customView.findViewById(R.id.title_text)
-        }
+        setSupportActionBar(findViewById(R.id.toolbar))
         title = ""
         setVolumeNameTitle()
         explorerAdapter = ExplorerElementAdapter(
             this,
             if (sharedPrefs.getBoolean("thumbnails", true)) {
-                encryptedVolume
+                app.volumeManager.getImageLoader(volumeId)
             } else {
                 null
             },
@@ -164,10 +158,15 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
             }
         }
         refresher.setOnRefreshListener {
+            val prefix = if (currentDirectoryPath == "/") "/" else "$currentDirectoryPath/"
+            app.volumeManager.evictImageCache(volumeId) { it.startsWith(prefix) }
             setCurrentPath(currentDirectoryPath)
             refresher.isRefreshing = false
         }
         bindFileOperationService()
+        findViewById<View>(R.id.info_bar)?.let {
+            applyHorizonalDisplayCutoutInsets(it)
+        }
     }
 
     class ExplorerViewModel: ViewModel() {
@@ -212,7 +211,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     }
 
     protected fun onExportFailed(errorResId: Int) {
-        CustomAlertDialogBuilder(this, theme)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.error)
             .setMessage(getString(R.string.tmp_export_failed, getString(errorResId)))
             .setPositiveButton(R.string.ok, null)
@@ -231,7 +230,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
             is EncryptedFileProvider.ExportedDiskFile -> R.string.export_disk
             else -> R.string.loading_msg_export
         }
-        object : LoadingTask<Pair<Intent?, Int?>>(this, theme, msg) {
+        object : LoadingTask<Pair<Intent?, Int?>>(this, msg) {
             override suspend fun doTask(): Pair<Intent?, Int?> {
                 return fileShare.openWith(exportedFile, size, volumeId)
             }
@@ -249,7 +248,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     private fun showOpenAsDialog(explorerElement: ExplorerElement) {
         val path = explorerElement.fullPath
         val adapter = OpenAsDialogAdapter(this, usf_open)
-        CustomAlertDialogBuilder(this, theme)
+        MaterialAlertDialogBuilder(this)
             .setSingleChoiceItems(adapter, -1) { dialog, which ->
                 when (adapter.getItem(which)) {
                     "image" -> startFileViewer(ImageViewer::class.java, path)
@@ -278,7 +277,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                     val filePath = PathUtils.pathJoin(currentDirectoryPath, it)
                     val handleID = encryptedVolume.openFileWriteMode(filePath)
                     if (handleID == -1L) {
-                        CustomAlertDialogBuilder(this, theme)
+                        MaterialAlertDialogBuilder(this)
                             .setTitle(R.string.error)
                             .setMessage(R.string.file_creation_failed)
                             .setPositiveButton(R.string.ok, null)
@@ -291,14 +290,14 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     }
 
     private fun setVolumeNameTitle() {
-        titleText.text = getString(R.string.volume, volumeName)
+        supportActionBar?.title = getString(R.string.volume, volumeName)
     }
 
     override fun onSelectionChanged(size: Int) {
         if (size == 0) {
             setVolumeNameTitle()
         } else {
-            titleText.text = getString(R.string.elements_selected, size, explorerElements.count { !it.isParentFolder })
+            supportActionBar?.title = getString(R.string.elements_selected, size, explorerElements.count { !it.isParentFolder })
         }
     }
 
@@ -416,7 +415,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     }
 
     private fun askLockVolume() {
-        CustomAlertDialogBuilder(this, theme)
+        MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.warning)
                 .setMessage(R.string.ask_lock_volume)
                 .setPositiveButton(R.string.ok) { _, _ ->
@@ -432,7 +431,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
             Toast.makeText(this, R.string.error_filename_empty, Toast.LENGTH_SHORT).show()
         } else {
             if (!encryptedVolume.mkdir(PathUtils.pathJoin(currentDirectoryPath, folderName))) {
-                CustomAlertDialogBuilder(this, theme)
+                MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.error)
                         .setMessage(R.string.error_mkdir)
                         .setPositiveButton(R.string.ok, null)
@@ -452,34 +451,30 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
 
     protected fun checkPathOverwrite(items: List<OperationFile>, dstDirectoryPath: String, callback: (List<OperationFile>?) -> Unit) {
         val srcDirectoryPath = items[0].parentPath
-        var ready = true
+        val dstPaths = HashSet<String>()
         for (i in items.indices) {
-            val testDstPath: String
-            if (items[i].dstPath == null){
-                testDstPath = PathUtils.pathJoin(dstDirectoryPath, PathUtils.getRelativePath(srcDirectoryPath, items[i].srcPath))
-                if (encryptedVolume.pathExists(testDstPath)) {
-                    ready = false
-                } else {
-                    items[i].dstPath = testDstPath
-                }
-            } else {
-                testDstPath = items[i].dstPath!!
-                if (encryptedVolume.pathExists(testDstPath) && !items[i].overwriteConfirmed) {
-                    ready = false
-                }
+            if (items[i].dstPath == null) {
+                items[i].dstPath = PathUtils.pathJoin(dstDirectoryPath, PathUtils.getRelativePath(srcDirectoryPath, items[i].srcPath))
             }
-            if (!ready){
-                CustomAlertDialogBuilder(this, theme)
+            val collision = items[i].dstPath in dstPaths
+            if (items[i].overwriteConfirmed || !(collision || encryptedVolume.pathExists(items[i].dstPath!!))) {
+                dstPaths.add(items[i].dstPath!!)
+            } else {
+                MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.warning)
                     .setMessage(getString(
-                        if (items[i].isDirectory) {
-                            R.string.dir_overwrite_question
+                        if (collision) {
+                            // No collision should happen on directories since we can't select multiple directories
+                            R.string.file_collision_question
                         } else {
-                            R.string.file_overwrite_question
-                        }, testDstPath
+                            if (items[i].isDirectory) {
+                                R.string.dir_overwrite_question
+                            } else {
+                                R.string.file_overwrite_question
+                            }
+                        }, items[i].dstPath
                     ))
                     .setPositiveButton(R.string.yes) {_, _ ->
-                        items[i].dstPath = testDstPath
                         items[i].overwriteConfirmed = true
                         checkPathOverwrite(items, dstDirectoryPath, callback)
                     }
@@ -505,12 +500,10 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                         callback(null)
                     }
                     .show()
-                break
+                return
             }
         }
-        if (ready){
-            callback(items)
-        }
+        callback(items)
     }
 
     protected fun onTaskResult(
@@ -528,13 +521,13 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 }
             }
             TaskResult.State.FAILED -> {
-                CustomAlertDialogBuilder(this, theme)
+                MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.error)
                     .setMessage(getString(failedErrorMessage, result.failedItem))
                     .setPositiveButton(R.string.ok, null)
                     .show()
             }
-            TaskResult.State.ERROR -> result.showErrorAlertDialog(this, theme)
+            TaskResult.State.ERROR -> result.showErrorAlertDialog(this)
             TaskResult.State.CANCELLED -> {}
         }
     }
@@ -544,7 +537,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         for (uri in uris) {
             val fileName = PathUtils.getFilenameFromURI(this, uri)
             if (fileName == null) {
-                CustomAlertDialogBuilder(this, theme)
+                MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.error)
                         .setMessage(getString(R.string.error_retrieving_filename, uri))
                         .setPositiveButton(R.string.ok, null)
@@ -568,20 +561,71 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         }
     }
 
-    protected fun rename(old_name: String, new_name: String){
-        if (new_name.isEmpty()) {
-            Toast.makeText(this, R.string.error_filename_empty, Toast.LENGTH_SHORT).show()
-        } else {
-            if (!encryptedVolume.rename(PathUtils.pathJoin(currentDirectoryPath, old_name), PathUtils.pathJoin(currentDirectoryPath, new_name))) {
-                CustomAlertDialogBuilder(this, theme)
-                        .setTitle(R.string.error)
-                        .setMessage(getString(R.string.rename_failed, old_name))
-                        .setPositiveButton(R.string.ok, null)
-                        .show()
-            } else {
-                setCurrentPath(currentDirectoryPath) {
-                    invalidateOptionsMenu()
+    private fun showRenameDialog(element: ExplorerElement, preselectedText: String) {
+        EditTextDialog(this, R.string.rename_title)
+            .setSelectedText(preselectedText)
+            .onSubmit { newName ->
+                if (newName.isEmpty()) {
+                    Toast.makeText(this, R.string.error_filename_empty, Toast.LENGTH_SHORT).show()
+                    showRenameDialog(element, element.name)
+                    return@onSubmit
                 }
+                val dstPath = if (newName.startsWith("/")) {
+                    newName
+                } else {
+                    PathUtils.pathJoin(currentDirectoryPath, newName)
+                }
+                val lastComponent = newName.substringAfterLast('/')
+                // if a directory is explicitly requested, rename into it with the original file name
+                if (lastComponent.isEmpty() || lastComponent == "." || lastComponent == "..") {
+                    checkRenameOverwrite(element, newName, PathUtils.pathJoin(dstPath, element.name))
+                } else {
+                    checkRenameOverwrite(element, newName, dstPath)
+                }
+            }
+            .show()
+    }
+
+    private fun askRenameOverwrite(messageResId: Int, dstPath: String, element: ExplorerElement, newName: String, onConfirm: () -> Unit) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.warning)
+            .setMessage(getString(messageResId, dstPath, element.name))
+            .setPositiveButton(R.string.yes) { _, _ -> onConfirm() }
+            .setNegativeButton(R.string.no) { _, _ -> showRenameDialog(element, newName) }
+            .show()
+    }
+
+    private fun checkRenameOverwrite(element: ExplorerElement, newName: String, dstPath: String) {
+        val attr = encryptedVolume.getAttr(dstPath)
+        when {
+            attr == null -> rename(element, dstPath)
+            attr.type == Stat.S_IFDIR ->
+                askRenameOverwrite(R.string.rename_into_dir_question, dstPath, element, newName) {
+                    checkRenameOverwrite(element, newName, PathUtils.pathJoin(dstPath, element.name))
+                }
+            element.isDirectory -> {
+                Toast.makeText(this, R.string.error_is_file, Toast.LENGTH_SHORT).show()
+                showRenameDialog(element, newName)
+            }
+            else ->
+                askRenameOverwrite(R.string.file_overwrite_question, dstPath, element, newName) {
+                    rename(element, dstPath)
+                }
+        }
+    }
+
+    private fun rename(element: ExplorerElement, dstPath: String) {
+        if (!encryptedVolume.rename(element.fullPath, dstPath)) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.error)
+                .setMessage(getString(R.string.rename_failed, element.name))
+                .setPositiveButton(R.string.ok, null)
+                .show()
+        } else {
+            val normalizedPath = PathUtils.normalizePath(dstPath)
+            app.volumeManager.evictImageCache(volumeId) { it == normalizedPath }
+            setCurrentPath(currentDirectoryPath) {
+                invalidateOptionsMenu()
             }
         }
     }
@@ -593,10 +637,6 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
             menu.findItem(R.id.external_open)?.isVisible = false
         }
         val noItemSelected = explorerAdapter.selectedItems.isEmpty()
-        with(UIUtils.getMenuIconNeutralTint(this, menu)) {
-            applyTo(R.id.sort, R.drawable.icon_sort)
-            applyTo(R.id.share, R.drawable.icon_share)
-        }
         menu.findItem(R.id.sort).isVisible = noItemSelected
         menu.findItem(R.id.lock).isVisible = noItemSelected
         menu.findItem(R.id.close).isVisible = noItemSelected
@@ -622,7 +662,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 true
             }
             R.id.sort -> {
-                CustomAlertDialogBuilder(this, theme)
+                MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.sort_order)
                         .setSingleChoiceItems(sortOrderEntries, currentSortOrderIndex) { dialog, which ->
                             currentSortOrderIndex = which
@@ -640,12 +680,8 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 true
             }
             R.id.rename -> {
-                val oldName = explorerElements[explorerAdapter.selectedItems.first()].name
-                EditTextDialog(this, R.string.rename_title)
-                    .setSelectedText(oldName)
-                    .onSubmit {
-                        rename(oldName, it)
-                    }.show()
+                val explorerElement = explorerElements[explorerAdapter.selectedItems.first()]
+                showRenameDialog(explorerElement, explorerElement.name)
                 true
             }
             R.id.open_as -> {

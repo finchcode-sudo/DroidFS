@@ -21,7 +21,7 @@ Currently, DroidFS supports the following encrypted containers:
 All of these permissions can be denied if you don't want to use the corresponding feature.
 
 DroidFS is free, open-source, and you can find the project's repository:
-- on GitHub: https://github.com/finchcode-sudo/DroidFS
+- on GitHub: https://github.com/hardcore-sushi/DroidFS
 - on the Gitea instance of the Chapril project: https://forge.chapril.org/hardcoresushi/DroidFS
 
 <b>Warning !</b>

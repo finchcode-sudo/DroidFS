@@ -11,21 +11,23 @@ import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
-import androidx.preference.SwitchPreference
 import androidx.preference.SwitchPreferenceCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import sushi.hardcore.droidfs.content_providers.VolumeProvider
 import sushi.hardcore.droidfs.databinding.ActivitySettingsBinding
 import sushi.hardcore.droidfs.util.AndroidUtils
 import sushi.hardcore.droidfs.util.Compat
-import sushi.hardcore.droidfs.widgets.CustomAlertDialogBuilder
 
 class SettingsActivity : BaseActivity() {
+    override val contentAreaId = R.id.settings
+
     private val notificationPermissionHelper = AndroidUtils.NotificationPermissionHelper(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        setSupportActionBar(findViewById(R.id.toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         val screen = intent.extras?.getString("screen") ?: "main"
         val fragment = if (screen == "UnsafeFeaturesSettingsFragment") {
@@ -69,7 +71,14 @@ class SettingsActivity : BaseActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             sharedPrefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-            findPreference<ListPreference>("color")?.setOnPreferenceChangeListener { _, _ ->
+            val colorPreference = findPreference<ListPreference>("color")
+            val blackThemePreference = findPreference<SwitchPreferenceCompat>("black_theme")
+            fun updateBlackThemeVisibility() {
+                blackThemePreference?.isVisible = colorPreference?.value != "dynamic"
+            }
+            updateBlackThemeVisibility()
+            colorPreference?.setOnPreferenceChangeListener { _, _ ->
+                updateBlackThemeVisibility()
                 refreshTheme()
                 true
             }
@@ -87,7 +96,7 @@ class SettingsActivity : BaseActivity() {
     class UnsafeFeaturesSettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.unsafe_features_preferences, rootKey)
-            findPreference<SwitchPreference>("usf_fingerprint")?.setOnPreferenceChangeListener { _, checked ->
+            findPreference<SwitchPreferenceCompat>("usf_fingerprint")?.setOnPreferenceChangeListener { _, checked ->
                 if (checked as Boolean) {
                     var errorMsg: String? = null
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -108,7 +117,7 @@ class SettingsActivity : BaseActivity() {
                     if (errorMsg == null) {
                         true
                     } else {
-                        CustomAlertDialogBuilder(requireContext(), (requireActivity() as BaseActivity).theme)
+                        MaterialAlertDialogBuilder(requireContext())
                             .setTitle(R.string.error)
                             .setMessage(errorMsg)
                             .setPositiveButton(R.string.ok, null)
@@ -119,20 +128,27 @@ class SettingsActivity : BaseActivity() {
                     true
                 }
             }
-            val switchBackground = findPreference<SwitchPreference>("usf_background")!!
-            val switchKeepOpen = findPreference<SwitchPreference>("usf_keep_open")!!
-            val switchExternalOpen = findPreference<SwitchPreference>("usf_open")!!
-            val switchExpose = findPreference<SwitchPreference>("usf_expose")!!
-            val switchSafWrite = findPreference<SwitchPreference>("usf_saf_write")!!
+            val switchBackground = findPreference<SwitchPreferenceCompat>("usf_background")!!
+            val switchKeepOpen = findPreference<SwitchPreferenceCompat>("usf_keep_open")!!
+            val switchLockOnScreenLock = findPreference<SwitchPreferenceCompat>("lock_on_screen_lock")!!
+            val switchExternalOpen = findPreference<SwitchPreferenceCompat>("usf_open")!!
+            val switchExpose = findPreference<SwitchPreferenceCompat>("usf_expose")!!
+            val switchSafWrite = findPreference<SwitchPreferenceCompat>("usf_saf_write")!!
 
             fun onUsfBackgroundChanged(usfBackground: Boolean) {
-                fun updateSwitchPreference(switch: SwitchPreference) = with (switch) {
+                fun updateSwitchPreferenceCompat(switch: SwitchPreferenceCompat) = with (switch) {
                     isChecked = isChecked && usfBackground
                     isEnabled = usfBackground
                     onPreferenceChangeListener?.onPreferenceChange(switch, isChecked)
                 }
-                updateSwitchPreference(switchKeepOpen)
-                updateSwitchPreference(switchExpose)
+                updateSwitchPreferenceCompat(switchKeepOpen)
+                updateSwitchPreferenceCompat(switchExpose)
+                with(switchLockOnScreenLock) {
+                    isEnabled = usfBackground
+                    if (!usfBackground) {
+                        isChecked = true
+                    }
+                }
             }
             onUsfBackgroundChanged(switchBackground.isChecked)
 
@@ -171,7 +187,7 @@ class SettingsActivity : BaseActivity() {
             }
             findPreference<ListPreference>("export_method")!!.setOnPreferenceChangeListener { _, newValue ->
                 if (newValue as String == "memory" && !Compat.isMemFileSupported()) {
-                    CustomAlertDialogBuilder(requireContext(), (requireActivity() as BaseActivity).theme)
+                    MaterialAlertDialogBuilder(requireContext())
                         .setTitle(R.string.error)
                         .setMessage(getString(R.string.memfd_create_unsupported, Compat.MEMFD_CREATE_MINIMUM_KERNEL_VERSION))
                         .setPositiveButton(R.string.ok, null)
