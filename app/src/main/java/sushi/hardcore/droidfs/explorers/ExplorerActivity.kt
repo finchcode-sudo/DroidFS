@@ -78,7 +78,7 @@ class ExplorerActivity : BaseExplorerActivity() {
             }
         }
     }
-    private val pickFiles = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+    private val pickFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris != null) {
             for (uri in uris) {
                 try {
@@ -91,7 +91,7 @@ class ExplorerActivity : BaseExplorerActivity() {
                 onImportComplete(uris)
             }
         }
-    }
+     }
     private val pickExportDirectory = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
