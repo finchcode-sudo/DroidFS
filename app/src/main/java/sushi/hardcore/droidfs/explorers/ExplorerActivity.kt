@@ -80,11 +80,17 @@ class ExplorerActivity : BaseExplorerActivity() {
             }
         }
     }
-    private val pickFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+    // 修改1: GetMultipleContents → OpenMultipleDocuments
+    // 修改3: WRITE 权限 → READ | WRITE 权限
+    private val pickFiles = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
             for (uri in uris) {
                 try {
-                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
                 } catch (e: SecurityException) {
                     e.printStackTrace()
                 }
@@ -210,7 +216,8 @@ class ExplorerActivity : BaseExplorerActivity() {
                             }
                             "importFiles" -> {
                                 app.isStartingExternalApp = true
-                                pickFiles.launch("*/*")
+                                // 修改2: launch 参数从 "*/*" 改为 arrayOf("*/*")
+                                pickFiles.launch(arrayOf("*/*"))
                             }
                             "importFolder" -> {
                                 app.isStartingExternalApp = true
