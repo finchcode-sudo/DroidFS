@@ -78,17 +78,20 @@ class ExplorerActivity : BaseExplorerActivity() {
             }
         }
     }
-    
-    // ✅ 修改点1：OpenMultipleDocuments → GetMultipleContents
     private val pickFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        // ✅ 修改点2：uris != null → uris.isNotEmpty()，并删除 takePersistableUriPermission
         if (uris.isNotEmpty()) {
+            for (uri in uris) {
+                try {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                } catch (e: SecurityException) {
+                    e.printStackTrace()
+                }
+            }
             importFilesFromUris(uris) {
                 onImportComplete(uris)
             }
         }
     }
-    
     private val pickExportDirectory = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -205,7 +208,6 @@ class ExplorerActivity : BaseExplorerActivity() {
                             }
                             "importFiles" -> {
                                 app.isStartingExternalApp = true
-                                // ✅ 修改点3：arrayOf("*/*") → "*/*"
                                 pickFiles.launch("*/*")
                             }
                             "importFolder" -> {
