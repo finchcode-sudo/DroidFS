@@ -1,3 +1,5 @@
+package sushi.hardcore.droidfs.explorers
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -5,6 +7,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.addCallback
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
@@ -78,7 +81,7 @@ class ExplorerActivity : BaseExplorerActivity() {
             }
         }
     }
-    private val pickFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+    private val pickFiles: ActivityResultLauncher<String> = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri> ->
         if (uris.isNotEmpty()) {
             for (uri in uris) {
                 try {
