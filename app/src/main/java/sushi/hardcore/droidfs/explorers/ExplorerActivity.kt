@@ -78,20 +78,13 @@ class ExplorerActivity : BaseExplorerActivity() {
             }
         }
     }
-    private val pickFiles = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris != null) {
-            for (uri in uris) {
-                try {
-                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                } catch (e: SecurityException) {
-                    e.printStackTrace()
-                }
-            }
-            importFilesFromUris(uris) {
-                onImportComplete(uris)
-            }
+    private val pickFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+    if (!uris.isNullOrEmpty()) {
+        importFilesFromUris(uris) {
+            onImportComplete(uris)
         }
     }
+}
     private val pickExportDirectory = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -207,8 +200,8 @@ class ExplorerActivity : BaseExplorerActivity() {
                                 pickFromOtherVolumes.launch(intent)
                             }
                             "importFiles" -> {
-                                app.isStartingExternalApp = true
-                                pickFiles.launch(arrayOf("*/*"))
+                              app.isStartingExternalApp = true
+                              pickFiles.launch("*/*")
                             }
                             "importFolder" -> {
                                 app.isStartingExternalApp = true
