@@ -58,7 +58,7 @@ class ExplorerActivity : BaseExplorerActivity() {
                     val paths = resultIntent.getStringArrayListExtra("paths")
                     val types = resultIntent.getIntegerArrayListExtra("types")
                     if (types != null && paths != null){
-                        object : LoadingTask<List<OperationFile>>(this, R.string.discovering_files) {
+                        object : LoadingTask<List<OperationFile>>(this, theme, R.string.discovering_files) {
                             override suspend fun doTask(): List<OperationFile> {
                                 val operationFiles = ArrayList<OperationFile>()
                                 for (i in paths.indices) {
@@ -312,7 +312,7 @@ class ExplorerActivity : BaseExplorerActivity() {
             }
             R.id.validate -> {
                 if (currentItemAction == ItemsActions.COPY){
-                    object : LoadingTask<List<OperationFile>>(this, R.string.discovering_files) {
+                    object : LoadingTask<List<OperationFile>>(this, theme, R.string.discovering_files) {
                         override suspend fun doTask(): List<OperationFile> {
                             val items = itemsToProcess.toMutableList()
                             itemsToProcess.filter { it.isDirectory }.forEach { dir ->
@@ -401,7 +401,7 @@ class ExplorerActivity : BaseExplorerActivity() {
                     }
                 }
                 app.isExporting = true
-                object : LoadingTask<Pair<Intent?, Int?>>(this, R.string.loading_msg_export) {
+                object : LoadingTask<Pair<Intent?, Int?>>(this, theme, R.string.loading_msg_export) {
                     override suspend fun doTask(): Pair<Intent?, Int?> {
                         return fileShare.share(files, volumeId)
                     }
