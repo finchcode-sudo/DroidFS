@@ -1,0 +1,14 @@
+plugins {
+    id("com.android.application") version '9.3.1' apply false
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+tasks.register('clean', Delete) {
+    delete layout.buildDirectory
+}
