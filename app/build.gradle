@@ -38,7 +38,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "sushi.hardcore.droidfs"
+        applicationId "sushi.hardcore.operit.droidfs"
         minSdkVersion 26 // libmpv 要求的最低版本, 原来是 21
         targetSdkVersion 36
         versionCode 40
