@@ -31,7 +31,6 @@ class ExplorerActivity : BaseExplorerActivity() {
 
     private var usf_decrypt = false
     private var usf_share = false
-    private val proposeWipe by lazy { sharedPrefs.getBoolean("propose_wipe_imported_files", true) }
     private var currentItemAction = ItemsActions.NONE
     private val itemsToProcess = ArrayList<OperationFile>()
     private val unsafeFeaturesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
@@ -137,27 +136,7 @@ class ExplorerActivity : BaseExplorerActivity() {
     }
 
     private fun onImportComplete(urisToWipe: List<Uri>, rootFile: DocumentFile? = null) {
-        if (!proposeWipe) {
-            Toast.makeText(this, R.string.success_import, Toast.LENGTH_SHORT).show()
-            return
-        }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.success_import)
-            .setMessage("""
-                            ${getString(R.string.success_import_msg)}
-                            ${getString(R.string.ask_for_wipe)}
-                            """.trimIndent())
-            .setPositiveButton(R.string.yes) { _, _ ->
-                activityScope.launch {
-                    onTaskResult(
-                        fileOperationService.wipeUris(urisToWipe, rootFile),
-                        R.string.wipe_failed,
-                        R.string.wipe_successful,
-                    )
-                }
-            }
-            .setNegativeButton(R.string.no, null)
-            .show()
+        Toast.makeText(this, R.string.success_import, Toast.LENGTH_SHORT).show()
     }
 
     override fun loadUnsafeFeatures() {
