@@ -33,6 +33,7 @@ class VideoPlayer : FileViewerActivity() {
 
     private lateinit var binding: ActivityVideoPlayerBinding
     private var mediaServer: LocalMediaServer? = null
+    private lateinit var subtitles: SubtitleController
     private var isPlaying = true
     private var isUserSeeking = false
     private var firstPlay = true
@@ -98,6 +99,8 @@ class VideoPlayer : FileViewerActivity() {
         binding = ActivityVideoPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        subtitles = SubtitleController(this, { encryptedVolume }, { fileViewerViewModel.filePath!! }, sharedPrefs)
+        binding.subtitleButton.setOnClickListener { subtitles.showMenu() }
         binding.rotateButton.setOnClickListener {
             requestedOrientation =
                 if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -149,12 +152,14 @@ class VideoPlayer : FileViewerActivity() {
         }
 
         binding.videoPlayer.initialize(filesDir.path, cacheDir.path)
+        subtitles.applySaved()
         loadCurrentFile()
         progressHandler.post(progressRunnable)
     }
 
     private fun loadCurrentFile() {
         mediaServer?.stop()
+        subtitles.onNewFile()
         val path = fileViewerViewModel.filePath!!
         val server = LocalMediaServer(encryptedVolume, path)
         mediaServer = server
@@ -194,6 +199,7 @@ class VideoPlayer : FileViewerActivity() {
     }
 
     private fun updateProgressUi() {
+        subtitles.onTick()
         val position = MPVLib.getPropertyDouble("time-pos") ?: 0.0
         val duration = MPVLib.getPropertyDouble("duration") ?: 0.0
 
@@ -312,6 +318,7 @@ class VideoPlayer : FileViewerActivity() {
         progressHandler.removeCallbacks(progressRunnable)
         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
         mediaServer?.stop()
+        subtitles.stopServers()
         binding.videoPlayer.destroy()
     }
 }

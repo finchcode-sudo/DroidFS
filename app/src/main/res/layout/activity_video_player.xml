@@ -35,6 +35,17 @@
             android:textSize="@dimen/title_file_name_text_size"
             android:textColor="@color/white"
             android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/subtitle_button"
+            android:layout_centerVertical="true"/>
+
+        <ImageButton
+            android:id="@+id/subtitle_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="12dp"
+            android:src="@drawable/icon_subtitles"
+            app:tint="@color/neutralIconTint"
             android:layout_toStartOf="@id/rotate_button"
             android:layout_centerVertical="true"/>
 

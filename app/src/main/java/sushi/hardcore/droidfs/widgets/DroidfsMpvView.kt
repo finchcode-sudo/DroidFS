@@ -25,6 +25,7 @@ class DroidfsMpvView(context: Context, attrs: AttributeSet) : SurfaceView(contex
 
     /** 初始化 libmpv, 在 Activity onCreate 里调一次 */
     fun initialize(configDir: String, cacheDir: String) {
+        writeFontsConf(configDir, cacheDir)
         MPVLib.create(context.applicationContext)
 
         MPVLib.setOptionString("config", "yes")
@@ -42,6 +43,37 @@ class DroidfsMpvView(context: Context, attrs: AttributeSet) : SurfaceView(contex
         MPVLib.setOptionString("idle", "once")
 
         holder.addCallback(this)
+    }
+
+    /**
+     * 写 fonts.conf, 让字幕渲染库(libass/fontconfig)能找到系统字体。
+     * 和 mpv-android 的 Utils.writeFontsConf 完全一样; 没有它, 中日韩字幕会显示成空白或方块。
+     */
+    private fun writeFontsConf(configDir: String, cacheDir: String) {
+        val parts = listOf(
+            "<fontconfig>",
+            "<dir>/system/fonts/</dir>",
+            "<dir>/product/fonts/</dir>",
+            "<cachedir>$cacheDir</cachedir>",
+            "<alias><family>serif</family>",
+            "<prefer><family>Noto Serif</family></prefer>",
+            "</alias>",
+            "<alias><family>sans-serif</family>",
+            "<prefer>",
+            "<family>Roboto</family>",
+            "<family>Noto Sans</family>",
+            "</prefer>",
+            "</alias>",
+            "<alias><family>monospace</family>",
+            "<prefer><family>Droid Sans Mono</family></prefer>",
+            "</alias>",
+            "</fontconfig>"
+        )
+        try {
+            java.io.File("$configDir/fonts.conf").writeText(parts.joinToString("\n"))
+        } catch (e: java.io.IOException) {
+            Log.w("DroidfsMpvView", "Failed to write fonts.conf", e)
+        }
     }
 
     /** 销毁 libmpv, 在 Activity onDestroy 里调一次 */
