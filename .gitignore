@@ -1,0 +1,25 @@
+.DS_Store
+.Trashes
+ehthumbs.db
+Thumbs.db
+build
+.cxx
+/app/release
+.gradle
+local.properties
+.idea/
+*.apk
+*.ap_
+*.dex
+*.class
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# mpv-android 原生库的编译产物 (由 CI 生成)
+/mpv-native/buildscripts/sdk
+/mpv-native/buildscripts/deps
+/mpv-native/buildscripts/prefix
+/mpv-native/src/obj
+/app/src/main/jniLibs
