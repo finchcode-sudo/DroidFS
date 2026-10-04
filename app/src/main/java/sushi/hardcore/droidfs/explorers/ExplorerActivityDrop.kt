@@ -7,12 +7,15 @@ import android.view.Menu
 import android.view.MenuItem
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import sushi.hardcore.droidfs.MainActivity
 import sushi.hardcore.droidfs.R
 import sushi.hardcore.droidfs.util.IntentUtils
 import java.nio.CharBuffer
 import java.nio.charset.StandardCharsets
 
 class ExplorerActivityDrop : BaseExplorerActivity() {
+
+    private var imported = false
 
     override fun init() {
         super.init()
@@ -24,7 +27,7 @@ class ExplorerActivityDrop : BaseExplorerActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.explorer_drop, menu)
         val result = super.onCreateOptionsMenu(menu)
-        menu.findItem(R.id.validate).isVisible = explorerAdapter.selectedItems.isEmpty()
+        menu.findItem(R.id.validate).isVisible = explorerAdapter.selectedItems.isEmpty() && !imported
         return result
     }
 
@@ -90,6 +93,8 @@ class ExplorerActivityDrop : BaseExplorerActivity() {
     }
 
     private fun onImported() {
+        imported = true
+        invalidateOptionsMenu()
         refreshCurrentDirectory()
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.success_import)
@@ -98,7 +103,16 @@ class ExplorerActivityDrop : BaseExplorerActivity() {
             .setPositiveButton(R.string.ok) { _, _ ->
                 finish()
             }
-            .setNegativeButton(R.string.cancel, null)
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                // switch to normal browsing so that back goes to the volume list instead of leaving the app
+                startActivity(Intent(this, MainActivity::class.java))
+                startActivity(
+                    Intent(this, ExplorerActivity::class.java)
+                        .putExtra("volumeId", volumeId)
+                        .putExtra("volumeName", intent.getStringExtra("volumeName") ?: "")
+                )
+                finish()
+            }
             .show()
     }
 }
