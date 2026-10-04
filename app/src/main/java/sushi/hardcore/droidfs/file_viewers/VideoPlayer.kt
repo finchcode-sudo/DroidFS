@@ -51,6 +51,8 @@ class VideoPlayer : FileViewerActivity() {
     private var swipeSeekStartY = 0f
     private var swipeSeekStartPositionSec = 0.0
     private var isSwipeSeeking = false
+    // 滑动满屏宽度对应的快进/快退秒数(视频比它短时按视频总长算). 想更细就调小, 更快就调大
+    private val swipeSeekFullWidthSec = 60.0
     private val swipeSeekThresholdPx by lazy { resources.displayMetrics.density * 24 }
 
     // 长按加速
@@ -252,7 +254,7 @@ class VideoPlayer : FileViewerActivity() {
                     if (isSwipeSeeking) {
                         val duration = MPVLib.getPropertyDouble("duration") ?: 0.0
                         if (duration > 0) {
-                            val deltaSec = (dx / view.width) * duration
+                            val deltaSec = (dx / view.width) * minOf(duration, swipeSeekFullWidthSec)
                             val target = (swipeSeekStartPositionSec + deltaSec).coerceIn(0.0, duration)
                             MPVLib.command(arrayOf("no-osd", "seek", target.toString(), "absolute"))
                         }
