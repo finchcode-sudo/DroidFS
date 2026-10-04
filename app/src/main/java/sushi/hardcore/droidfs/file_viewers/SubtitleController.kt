@@ -326,7 +326,8 @@ class SubtitleController(
                     (MPVLib.getPropertyInt("sid") ?: -1).let { if (it != -1) externalPaths[it] = fullPath }
                     // 记住这个视频用的字幕, 下次打开自动恢复
                     prefs.edit().putString(extKey(), fullPath).remove(offKey()).apply()
-                    Toast.makeText(activity, (if (auto) "已自动加载字幕: " else "已导入字幕: ") + name, Toast.LENGTH_SHORT).show()
+                    // 自动加载不弹提示, 只有手动导入才提示
+                    if (!auto) Toast.makeText(activity, "已导入字幕: $name", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Throwable) {
                 activity.runOnUiThread {
