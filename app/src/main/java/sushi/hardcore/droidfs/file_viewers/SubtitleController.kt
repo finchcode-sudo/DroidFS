@@ -48,6 +48,10 @@ class SubtitleController(
 
     private fun px(dp: Int) = (dp * density).toInt()
 
+    // 每个视频单独记住: 导入过哪个字幕 / 是否手动关闭了字幕 (和原播放器一样, 下次打开自动恢复)
+    private fun extKey() = "sub_ext:" + currentPath()
+    private fun offKey() = "sub_off:" + currentPath()
+
     // ---------------------------------------------------------------- 生命周期
 
     fun stopServers() {
@@ -105,7 +109,7 @@ class SubtitleController(
 
     // ---------------------------------------------------------------- 选择字幕轨道
 
-    private data class SubTrack(val id: Int, val name: String)
+    private data class SubTrack(val id: Int, val name: String, val external: Boolean = false)
 
     private fun loadTracks(): List<SubTrack> {
         val list = arrayListOf(SubTrack(-1, "关闭字幕"))
@@ -122,7 +126,7 @@ class SubtitleController(
                 else -> "#$id"
             }
             if (external) name += " [外挂]"
-            list.add(SubTrack(id, name))
+            list.add(SubTrack(id, name, external))
         }
         return list
     }
@@ -137,14 +141,31 @@ class SubtitleController(
                 val t = tracks[which]
                 if (t.id == -1) {
                     MPVLib.setPropertyString("sid", "no")
+                    prefs.edit().putBoolean(offKey(), true).apply()
                 } else {
                     MPVLib.setPropertyInt("sid", t.id)
                     MPVLib.setPropertyBoolean("sub-visibility", true)
+                    prefs.edit().remove(offKey()).apply()
                 }
                 dialog.dismiss()
             }
+            .apply {
+                if (tracks.any { it.external }) {
+                    setNeutralButton("移除外挂字幕") { _, _ -> removeExternal(tracks.filter { it.external }) }
+                }
+            }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /** 移除导入的字幕, 并清掉这个视频的字幕记录, 下次打开不会再自动恢复它 */
+    private fun removeExternal(external: List<SubTrack>) {
+        for (t in external) {
+            MPVLib.command(arrayOf("sub-remove", t.id.toString()))
+        }
+        // 清掉记录; 并标记为关闭, 避免同名自动加载又把它加回来 (重新导入字幕会恢复)
+        prefs.edit().remove(extKey()).putBoolean(offKey(), true).apply()
+        Toast.makeText(activity, "已移除外挂字幕", Toast.LENGTH_SHORT).show()
     }
 
     // ---------------------------------------------------------------- 导入 / 自动加载
@@ -200,7 +221,27 @@ class SubtitleController(
         }.start()
     }
 
+    /** 打开视频时: 先恢复上次导入的字幕, 没有记录再自动找同名字幕 */
     private fun autoLoad() {
+        if (prefs.getBoolean(offKey(), false)) return // 上次手动关闭了字幕
+        val saved = prefs.getString(extKey(), null)
+        if (saved != null) {
+            listSubtitles(false) { subs ->
+                val match = subs.firstOrNull { it.second == saved }
+                if (match != null) {
+                    addExternal(match.second, match.first, true)
+                } else {
+                    // 记住的字幕文件已经不在了(被删/改名), 清掉记录, 回到自动查找
+                    prefs.edit().remove(extKey()).apply()
+                    autoLoadSameName()
+                }
+            }
+        } else {
+            autoLoadSameName()
+        }
+    }
+
+    private fun autoLoadSameName() {
         listSubtitles(true) { subs ->
             subs.firstOrNull()?.let { (name, fullPath) ->
                 addExternal(fullPath, name, true)
@@ -238,6 +279,8 @@ class SubtitleController(
                 activity.runOnUiThread {
                     MPVLib.command(arrayOf("sub-add", url, "select", name))
                     MPVLib.setPropertyBoolean("sub-visibility", true)
+                    // 记住这个视频用的字幕, 下次打开自动恢复
+                    prefs.edit().putString(extKey(), fullPath).remove(offKey()).apply()
                     Toast.makeText(activity, (if (auto) "已自动加载字幕: " else "已导入字幕: ") + name, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Throwable) {
