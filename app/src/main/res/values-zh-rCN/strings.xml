@@ -13,6 +13,7 @@
     <string name="dir_empty">文件夹空</string>
     <string name="warning">警告！</string>
     <string name="ask_lock_volume">你想要锁定该卷吗？</string>
+    <string name="ask_lock">是否锁定?</string>
     <string name="ok">锁了</string>
     <string name="cancel">取消</string>
     <string name="enter_folder_name">文件夹名称</string>
