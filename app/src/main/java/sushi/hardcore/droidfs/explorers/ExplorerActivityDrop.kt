@@ -93,11 +93,12 @@ class ExplorerActivityDrop : BaseExplorerActivity() {
         refreshCurrentDirectory()
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.success_import)
-            .setMessage(R.string.success_import_msg)
+            .setMessage("${getString(R.string.success_import_msg)}\n${getString(R.string.ask_lock)}")
             .setCancelable(false)
             .setPositiveButton(R.string.ok) { _, _ ->
                 finish()
             }
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 }
