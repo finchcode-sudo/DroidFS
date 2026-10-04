@@ -12,6 +12,7 @@
     <string name="dir_empty">Directory Empty</string>
     <string name="warning">Warning !</string>
     <string name="ask_lock_volume">Are you sure you want to lock this volume ?</string>
+    <string name="ask_lock">Do you want to lock the volume?</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="enter_folder_name">Folder Name:</string>
