@@ -44,6 +44,7 @@ class SubtitleController(
 ) {
     private val servers = mutableListOf<LocalMediaServer>()
     private var autoPending = false
+    private var currentDialog: AlertDialog? = null
     private val density = activity.resources.displayMetrics.density
 
     private fun px(dp: Int) = (dp * density).toInt()
@@ -134,38 +135,67 @@ class SubtitleController(
     private fun showTrackDialog() {
         val tracks = loadTracks()
         val selected = MPVLib.getPropertyInt("sid") ?: -1
-        val checked = tracks.indexOfFirst { it.id == selected }.coerceAtLeast(0)
-        AlertDialog.Builder(activity)
+
+        val root = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        val radios = ArrayList<RadioButton>()
+
+        for (t in tracks) {
+            val row = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(px(4), px(8), px(4), px(8))
+            }
+            val radio = RadioButton(activity).apply {
+                text = t.name
+                isChecked = t.id == selected
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                setOnClickListener {
+                    radios.forEach { it.isChecked = false }
+                    isChecked = true
+                    if (t.id == -1) {
+                        MPVLib.setPropertyString("sid", "no")
+                        prefs.edit().putBoolean(offKey(), true).apply()
+                    } else {
+                        MPVLib.setPropertyInt("sid", t.id)
+                        MPVLib.setPropertyBoolean("sub-visibility", true)
+                        prefs.edit().remove(offKey()).apply()
+                    }
+                }
+            }
+            radios.add(radio)
+            row.addView(radio)
+            if (t.external) {
+                row.addView(TextView(activity).apply {
+                    text = "✕"
+                    textSize = 16f
+                    setPadding(px(16), 0, px(8), 0)
+                    setOnClickListener {
+                        removeExternal(listOf(t))
+                        currentDialog?.dismiss()
+                        showTrackDialog() // 重新打开, 刷新列表
+                    }
+                })
+            }
+            root.addView(row)
+        }
+
+        currentDialog = AlertDialog.Builder(activity)
             .setTitle("选择字幕轨道")
-            .setSingleChoiceItems(tracks.map { it.name }.toTypedArray(), checked) { dialog, which ->
-                val t = tracks[which]
-                if (t.id == -1) {
-                    MPVLib.setPropertyString("sid", "no")
-                    prefs.edit().putBoolean(offKey(), true).apply()
-                } else {
-                    MPVLib.setPropertyInt("sid", t.id)
-                    MPVLib.setPropertyBoolean("sub-visibility", true)
-                    prefs.edit().remove(offKey()).apply()
-                }
-                dialog.dismiss()
-            }
-            .apply {
-                if (tracks.any { it.external }) {
-                    setNeutralButton("移除外挂字幕") { _, _ -> removeExternal(tracks.filter { it.external }) }
-                }
-            }
+            .setView(ScrollView(activity).apply { addView(root) })
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    /** 移除导入的字幕, 并清掉这个视频的字幕记录, 下次打开不会再自动恢复它 */
-    private fun removeExternal(external: List<SubTrack>) {
-        for (t in external) {
+    /** 移除导入的字幕    /** 移除导入的字幕(可以只移除其中一条); 全部移除完才清掉记忆, 避免下次自动恢复 */
+    private fun removeExternal(toRemove: List<SubTrack>) {
+        for (t in toRemove) {
             MPVLib.command(arrayOf("sub-remove", t.id.toString()))
         }
-        // 清掉记录; 并标记为关闭, 避免同名自动加载又把它加回来 (重新导入字幕会恢复)
-        prefs.edit().remove(extKey()).putBoolean(offKey(), true).apply()
-        Toast.makeText(activity, "已移除外挂字幕", Toast.LENGTH_SHORT).show()
+        val remaining = loadTracks().any { it.external }
+        if (!remaining) {
+            prefs.edit().remove(extKey()).putBoolean(offKey(), true).apply()
+        }
+        Toast.makeText(activity, if (toRemove.size > 1) "已移除外挂字幕" else "已移除: ${toRemove[0].name}", Toast.LENGTH_SHORT).show()
     }
 
     // ---------------------------------------------------------------- 导入 / 自动加载
