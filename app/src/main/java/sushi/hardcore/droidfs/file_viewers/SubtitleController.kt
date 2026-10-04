@@ -189,7 +189,7 @@ class SubtitleController(
             .show()
     }
 
-    /** 移除导入的字幕    /** 移除导入的字幕(可以只移除其中一条); 全部移除完才清掉记忆, 避免下次自动恢复 */
+    /** 移除导入的字幕(可以只移除其中一条); 全部移除完才清掉记忆, 避免下次自动恢复 */
     private fun removeExternal(toRemove: List<SubTrack>) {
         for (t in toRemove) {
             MPVLib.command(arrayOf("sub-remove", t.id.toString()))
