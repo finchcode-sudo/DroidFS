@@ -43,6 +43,8 @@ class SubtitleController(
     private val prefs: SharedPreferences,
 ) {
     private val servers = mutableListOf<LocalMediaServer>()
+    // mpv 的 track-list 不会把原始路径还给我们, 这里自己记一份 mpv轨道id -> 卷内完整路径, 用来判断"已添加"
+    private val externalPaths = HashMap<Int, String>()
     private var autoPending = false
     private var currentDialog: AlertDialog? = null
     private val density = activity.resources.displayMetrics.density
@@ -63,6 +65,7 @@ class SubtitleController(
     /** 每次开始播放一个新视频时调用 */
     fun onNewFile() {
         stopServers()
+        externalPaths.clear()
         autoPending = true
         // mpv 的 sub-delay 在切换文件时不会自动回到 0
         MPVLib.setPropertyDouble("sub-delay", 0.0)
@@ -110,7 +113,7 @@ class SubtitleController(
 
     // ---------------------------------------------------------------- 选择字幕轨道
 
-    private data class SubTrack(val id: Int, val name: String, val external: Boolean = false)
+    private data class SubTrack(val id: Int, val name: String, val external: Boolean = false, val fullPath: String = "")
 
     private fun loadTracks(): List<SubTrack> {
         val list = arrayListOf(SubTrack(-1, "关闭字幕"))
@@ -127,7 +130,7 @@ class SubtitleController(
                 else -> "#$id"
             }
             if (external) name += " [外挂]"
-            list.add(SubTrack(id, name, external))
+            list.add(SubTrack(id, name, external, externalPaths[id] ?: ""))
         }
         return list
     }
@@ -288,10 +291,20 @@ class SubtitleController(
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             } else {
+                // 已经加载进播放器的外挂字幕(按完整路径匹配), 在列表里标"已添加"
+                val loadedPaths = loadTracks().filter { it.external }.map { it.fullPath }.toSet()
+                val labels = subs.map { (name, fullPath) ->
+                    if (fullPath in loadedPaths) "$name  (已添加)" else name
+                }
                 AlertDialog.Builder(activity)
                     .setTitle("导入字幕")
-                    .setItems(subs.map { it.first }.toTypedArray()) { _, which ->
-                        addExternal(subs[which].second, subs[which].first, false)
+                    .setItems(labels.toTypedArray()) { _, which ->
+                        val (name, fullPath) = subs[which]
+                        if (fullPath in loadedPaths) {
+                            Toast.makeText(activity, "已添加过这个字幕了", Toast.LENGTH_SHORT).show()
+                        } else {
+                            addExternal(fullPath, name, false)
+                        }
                     }
                     .setNegativeButton(android.R.string.cancel, null)
                     .show()
@@ -309,6 +322,8 @@ class SubtitleController(
                 activity.runOnUiThread {
                     MPVLib.command(arrayOf("sub-add", url, "select", name))
                     MPVLib.setPropertyBoolean("sub-visibility", true)
+                    // 新加的轨道一定是 sid 当前选中的那个, 记下它的 mpv id 对应哪个卷内文件
+                    (MPVLib.getPropertyInt("sid") ?: -1).let { if (it != -1) externalPaths[it] = fullPath }
                     // 记住这个视频用的字幕, 下次打开自动恢复
                     prefs.edit().putString(extKey(), fullPath).remove(offKey()).apply()
                     Toast.makeText(activity, (if (auto) "已自动加载字幕: " else "已导入字幕: ") + name, Toast.LENGTH_SHORT).show()
