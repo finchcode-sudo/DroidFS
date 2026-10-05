@@ -79,6 +79,16 @@ class DroidfsMpvView(context: Context, attrs: AttributeSet) : SurfaceView(contex
     /** 销毁 libmpv, 在 Activity onDestroy 里调一次 */
     fun destroy() {
         holder.removeCallback(this)
+        // 退出时先立刻静音+暂停+停止, 把还没播完的音频缓冲区截断,
+        // 不然 destroy() 销毁过程中缓冲区里剩的音频会被继续播出来,
+        // 听起来就像退出时还在正常放声音。
+        try {
+            MPVLib.setPropertyInt("volume", 0)
+            MPVLib.setPropertyBoolean("pause", true)
+            MPVLib.command(arrayOf("stop"))
+        } catch (e: Throwable) {
+            // mpv 核心可能已经在关闭了, 忽略
+        }
         MPVLib.destroy()
     }
 
