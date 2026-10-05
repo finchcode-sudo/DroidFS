@@ -313,6 +313,20 @@ class VideoPlayer : FileViewerActivity() {
         if (visible) showPartialSystemUi() else hideSystemUi()
     }
 
+    override fun onPause() {
+        super.onPause()
+        if (isFinishing) {
+            // 退出时立刻切断音频, 不要等到 onDestroy() 才停(那时退出动画已经放完,
+            // 缓冲区里剩的音频会被继续播出来, 听起来就像还在正常放声音)
+            try {
+                MPVLib.setPropertyInt("volume", 0)
+                MPVLib.command(arrayOf("stop"))
+            } catch (e: Throwable) {
+                // 忽略, 真正的清理在 onDestroy() 里做
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         progressHandler.removeCallbacks(progressRunnable)
