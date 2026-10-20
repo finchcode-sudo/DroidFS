@@ -77,6 +77,9 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     private var allExplorerElements: MutableList<ExplorerElement> = mutableListOf()
     private var searchQuery = ""
     private var searchItem: MenuItem? = null
+    // true between invalidateOptionsMenu() and the re-creation of the menu: the search view is then
+    // collapsed by the system, which must not be mistaken for the user closing the search
+    private var keepSearchOnMenuRebuild = false
     protected lateinit var explorerAdapter: ExplorerElementAdapter
     protected lateinit var app: VolumeManagerApp
     private var usf_open = false
@@ -352,7 +355,10 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 !it.isParentFolder && it.name.contains(searchQuery, ignoreCase = true)
             }.toMutableList()
         }
-        unselectAll(false)
+        // avoid re-creating the menu while the search view is open, unless the selection must be cleared
+        if (explorerAdapter.selectedItems.isNotEmpty() || searchItem?.isActionViewExpanded != true) {
+            unselectAll(false)
+        }
         loader.isVisible = false
         recycler_view_explorer.isVisible = true
         explorerAdapter.explorerElements = explorerElements
@@ -385,6 +391,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
 
     private fun onSearchQueryChanged(query: String) {
         if (query == searchQuery) return
+        if (keepSearchOnMenuRebuild && query.isEmpty()) return
         searchQuery = query
         // displayExplorerElements must not be called if directoryLoadingTask is active,
         // it will be called with the new query once the loading is over
@@ -656,9 +663,17 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         }
     }
 
+    override fun invalidateOptionsMenu() {
+        keepSearchOnMenuRebuild = searchQuery.isNotEmpty()
+        super.invalidateOptionsMenu()
+    }
+
     private fun setupSearchItem(item: MenuItem?, visible: Boolean) {
         searchItem = item
-        if (item == null) return
+        if (item == null) {
+            keepSearchOnMenuRebuild = false
+            return
+        }
         item.isVisible = visible
         val searchView = item.actionView as SearchView
         searchView.queryHint = getString(R.string.search)
@@ -667,7 +682,9 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         if (visible && searchQuery.isNotEmpty()) {
             item.expandActionView()
             searchView.setQuery(searchQuery, false)
+            searchView.requestFocus()
         }
+        keepSearchOnMenuRebuild = false
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
                 searchView.clearFocus()
