@@ -351,9 +351,14 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         explorerElements = if (searchQuery.isEmpty()) {
             allExplorerElements
         } else {
-            allExplorerElements.filter {
-                !it.isParentFolder && it.name.startsWith(searchQuery, ignoreCase = true)
-            }.toMutableList()
+            // names containing the query, those starting with it first (stable: keeps the sort order inside each group)
+            val matches = allExplorerElements.filter {
+                !it.isParentFolder && it.name.contains(searchQuery, ignoreCase = true)
+            }
+            val (prefixMatches, otherMatches) = matches.partition {
+                it.name.startsWith(searchQuery, ignoreCase = true)
+            }
+            (prefixMatches + otherMatches).toMutableList()
         }
         // avoid re-creating the menu while the search view is open, unless the selection must be cleared
         if (explorerAdapter.selectedItems.isNotEmpty() || searchItem?.isActionViewExpanded != true) {
