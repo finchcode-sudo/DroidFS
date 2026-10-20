@@ -33,6 +33,14 @@
         android:title="@string/rename"/>
 
     <item
+        android:id="@+id/search"
+        app:showAsAction="always|collapseActionView"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        android:title="@string/search"
+        android:icon="@drawable/icon_search"
+        app:iconTint="?attr/menuIconColor"/>
+
+    <item
         android:id="@+id/sort"
         app:showAsAction="ifRoom"
         android:title="@string/sort_by"

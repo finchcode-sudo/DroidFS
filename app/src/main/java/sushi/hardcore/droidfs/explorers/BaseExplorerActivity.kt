@@ -11,6 +11,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
+import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -72,6 +73,10 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     protected val activityScope = MainScope()
     private var directoryLoadingTask: Job? = null
     protected lateinit var explorerElements: MutableList<ExplorerElement>
+    // all the elements of the current directory, explorerElements is the (possibly filtered) displayed subset
+    private var allExplorerElements: MutableList<ExplorerElement> = mutableListOf()
+    private var searchQuery = ""
+    private var searchItem: MenuItem? = null
     protected lateinit var explorerAdapter: ExplorerElementAdapter
     protected lateinit var app: VolumeManagerApp
     private var usf_open = false
@@ -130,6 +135,10 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         setRecyclerViewLayout()
         onBackPressedDispatcher.addCallback(this) {
             if (explorerAdapter.selectedItems.isEmpty()) {
+                if (searchQuery.isNotEmpty()) {
+                    searchItem?.collapseActionView()
+                    return@addCallback
+                }
                 val parentPath = PathUtils.getParentPath(currentDirectoryPath)
                 if (parentPath == currentDirectoryPath) {
                     isEnabled = false
@@ -335,7 +344,14 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     }
 
     private fun displayExplorerElements() {
-        ExplorerElement.sortBy(sortOrderValues[currentSortOrderIndex], foldersFirst, explorerElements)
+        ExplorerElement.sortBy(sortOrderValues[currentSortOrderIndex], foldersFirst, allExplorerElements)
+        explorerElements = if (searchQuery.isEmpty()) {
+            allExplorerElements
+        } else {
+            allExplorerElements.filter {
+                !it.isParentFolder && it.name.contains(searchQuery, ignoreCase = true)
+            }.toMutableList()
+        }
         unselectAll(false)
         loader.isVisible = false
         recycler_view_explorer.isVisible = true
@@ -367,7 +383,18 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         }
     }
 
+    private fun onSearchQueryChanged(query: String) {
+        if (query == searchQuery) return
+        searchQuery = query
+        // displayExplorerElements must not be called if directoryLoadingTask is active,
+        // it will be called with the new query once the loading is over
+        if (::explorerElements.isInitialized && directoryLoadingTask?.isActive != true) {
+            displayExplorerElements()
+        }
+    }
+
     protected fun changeCurrentDirectory(path: String) {
+        searchItem?.collapseActionView()
         currentDirectoryPath = path
         refreshCurrentDirectory {
             recycler_view_explorer.scrollToPosition(0)
@@ -385,6 +412,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 ExplorerElement("..", Stat.parentFolderStat(), parentPath = currentDirectoryPath)
             )
         }
+        allExplorerElements = explorerElements
         textDirEmpty.visibility = if (explorerElements.size == 0) View.VISIBLE else View.GONE
         displayNumberOfElements(numberOfFilesText, R.string.one_file, R.string.multiple_files, explorerElements.count { it.isRegularFile })
         displayNumberOfElements(numberOfFoldersText, R.string.one_folder, R.string.multiple_folders, explorerElements.count { it.isDirectory })
@@ -628,6 +656,39 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         }
     }
 
+    private fun setupSearchItem(item: MenuItem?, visible: Boolean) {
+        searchItem = item
+        if (item == null) return
+        item.isVisible = visible
+        val searchView = item.actionView as SearchView
+        searchView.queryHint = getString(R.string.search)
+        searchView.maxWidth = Int.MAX_VALUE
+        // restore the state, as the menu is re-created by invalidateOptionsMenu()
+        if (visible && searchQuery.isNotEmpty()) {
+            item.expandActionView()
+            searchView.setQuery(searchQuery, false)
+        }
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String): Boolean {
+                searchView.clearFocus()
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String): Boolean {
+                onSearchQueryChanged(newText)
+                return true
+            }
+        })
+        item.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+            override fun onMenuItemActionExpand(item: MenuItem): Boolean = true
+
+            override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+                onSearchQueryChanged("")
+                return true
+            }
+        })
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.rename).isVisible = false
         menu.findItem(R.id.open_as)?.isVisible = false
@@ -636,6 +697,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         }
         val noItemSelected = explorerAdapter.selectedItems.isEmpty()
         menu.findItem(R.id.sort).isVisible = noItemSelected
+        setupSearchItem(menu.findItem(R.id.search), noItemSelected)
         menu.findItem(R.id.lock).isVisible = noItemSelected
         menu.findItem(R.id.close).isVisible = noItemSelected
         supportActionBar?.setDisplayHomeAsUpEnabled(!noItemSelected)

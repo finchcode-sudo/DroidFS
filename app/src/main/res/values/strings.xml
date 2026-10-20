@@ -162,6 +162,7 @@
     <string name="auto_fit_summary">Auto-rotate the screen to fit video dimensions</string>
     <string name="open_tree_failed">No file explorer found. Please install one and retry.</string>
     <string name="close_volume">Close volume</string>
+    <string name="search">Search</string>
     <string name="sort_by">Sort By</string>
     <string name="cut">Cut</string>
     <string name="map_folders">Map folders</string>

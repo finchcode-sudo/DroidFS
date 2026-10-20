@@ -159,6 +159,7 @@
     <string name="auto_fit_summary">自动旋转屏幕以适应屏幕尺寸</string>
     <string name="open_tree_failed">未发现文件浏览器。请安装后重试</string>
     <string name="close_volume">关闭卷</string>
+    <string name="search">搜索</string>
     <string name="sort_by">分类方式</string>
     <string name="cut">剪切</string>
     <string name="map_folders">显示文件夹大小</string>
