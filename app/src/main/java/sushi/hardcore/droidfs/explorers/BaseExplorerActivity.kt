@@ -352,7 +352,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
             allExplorerElements
         } else {
             allExplorerElements.filter {
-                !it.isParentFolder && it.name.contains(searchQuery, ignoreCase = true)
+                !it.isParentFolder && it.name.startsWith(searchQuery, ignoreCase = true)
             }.toMutableList()
         }
         // avoid re-creating the menu while the search view is open, unless the selection must be cleared
