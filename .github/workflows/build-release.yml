@@ -50,13 +50,14 @@ jobs:
             if [ -z "$(ls -A "$d" 2>/dev/null)" ]; then need=1; fi
           done
           if [ "$need" = "1" ]; then
-            git clone https://tangled.org/cipherd.arkensys.dedyn.io/DroidFS /tmp/upstream
+            # tangled.org 的地址已失效, 改用 GitHub 上的上游镜像 (hardcore-sushi), 固定在 v2.3.2
+            git clone --depth 1 --branch v2.3.2 https://github.com/hardcore-sushi/DroidFS /tmp/upstream
             cd /tmp/upstream
-            git checkout 2.3.2 2>/dev/null || git checkout v2.3.2 2>/dev/null || echo "tag not found, using default branch"
-            git submodule update --init libpdfviewer app/libgocryptfs app/libcryfs || true
-            (cd app/libgocryptfs && git submodule update --init) || true
-            (cd app/libcryfs && git submodule update --init) || true
-            git submodule update --init app/ffmpeg/ffmpeg || true
+            fix_urls() { sed -i 's#https://tangled.org/cipherd.arkensys.dedyn.io/#https://github.com/hardcore-sushi/#' .gitmodules; git submodule sync -q; }
+            fix_urls
+            git submodule update --init --depth 1 libpdfviewer app/libgocryptfs app/libcryfs
+            (cd app/libgocryptfs && fix_urls && git submodule update --init --depth 1)
+            (cd app/libcryfs && fix_urls && git submodule update --init --depth 1)
             cd "$GITHUB_WORKSPACE"
             for d in libpdfviewer app/libgocryptfs app/libcryfs app/ffmpeg/ffmpeg; do
               if [ -z "$(ls -A "$d" 2>/dev/null)" ]; then
