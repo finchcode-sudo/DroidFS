@@ -17,13 +17,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: gradle
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -75,22 +76,49 @@ jobs:
           fi
           ls libpdfviewer app/libgocryptfs app/libcryfs app/ffmpeg/ffmpeg | head -60
 
+      # FFmpeg / libgocryptfs 源码固定在 v2.3.2, 编译结果只在 build.sh 变化时才需要重编
+      - name: Cache FFmpeg build
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: app/ffmpeg/build
+          key: ffmpeg-arm64-n7.1-v2.3.2-${{ hashFiles('app/ffmpeg/build.sh') }}
+
       - name: Build FFmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         run: |
           cd app/ffmpeg
           chmod +x build.sh
           ./build.sh arm64-v8a
 
+      - name: Cache libgocryptfs build
+        id: gocryptfs-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            app/libgocryptfs/build
+            app/libgocryptfs/lib
+            app/libgocryptfs/include
+          key: gocryptfs-arm64-v2.3.2-${{ hashFiles('app/libgocryptfs/build.sh') }}
+
       - name: Build libgocryptfs
+        if: steps.gocryptfs-cache.outputs.cache-hit != 'true'
         run: |
           cd app/libgocryptfs
           chmod +x build.sh
           ./build.sh arm64-v8a
 
+      # 缓存 C++ 编译结果 (libcryfs 等), 只改 Kotlin 时可以直接命中
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ccache-arm64-${{ github.ref_name }}
+          restore-keys: ccache-arm64-
+          max-size: 500M
+
       # ---- mpv 播放引擎: 编译 mpv-android 官方的原生库 (libmpv + ffmpeg + libplayer), 只编 arm64 ----
       - name: Install packages for mpv
         run: |
-          sudo apt-get update
           sudo apt-get install -y autoconf pkgconf libtool ninja-build python3-pip gperf nasm
           sudo pip3 install --break-system-packages meson
 
@@ -135,6 +163,9 @@ jobs:
           ls -la app/src/main/jniLibs/arm64-v8a
 
       - name: Assemble release APK
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease -Pabi=arm64-v8a --stacktrace
