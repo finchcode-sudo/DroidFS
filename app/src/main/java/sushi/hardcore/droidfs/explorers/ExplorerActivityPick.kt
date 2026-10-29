@@ -23,7 +23,7 @@ class ExplorerActivityPick : BaseExplorerActivity() {
 
     override fun onExplorerElementClick(position: Int) {
         if (explorerAdapter.selectedItems.isEmpty()) {
-            val fullPath = PathUtils.pathJoin(currentDirectoryPath, explorerElements[position].name)
+            val fullPath = explorerElements[position].fullPath
             when {
                 explorerElements[position].isDirectory -> {
                     changeCurrentDirectory(fullPath)
@@ -61,7 +61,7 @@ class ExplorerActivityPick : BaseExplorerActivity() {
                 val types = ArrayList<Int>()
                 for (i in explorerAdapter.selectedItems) {
                     val e = explorerElements[i]
-                    paths.add(PathUtils.pathJoin(currentDirectoryPath, e.name))
+                    paths.add(e.fullPath)
                     types.add(e.stat.type)
                 }
                 resultIntent.putStringArrayListExtra("paths", paths)

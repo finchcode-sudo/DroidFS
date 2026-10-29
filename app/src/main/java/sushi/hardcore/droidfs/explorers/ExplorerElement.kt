@@ -8,6 +8,8 @@ import java.text.Collator
 class ExplorerElement(val name: String, val stat: Stat, val parentPath: String) {
     val fullPath: String = PathUtils.pathJoin(parentPath.ifEmpty { "/" }, name)
     val collationKey = Collator.getInstance().getCollationKeyForFileName(fullPath)
+    // path relative to the searched directory, only set for search results located in a sub-directory
+    var searchLabel: String? = null
 
     val isDirectory: Boolean
         get() = stat.type == Stat.S_IFDIR

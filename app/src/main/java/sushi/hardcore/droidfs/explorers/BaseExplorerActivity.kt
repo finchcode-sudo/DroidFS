@@ -27,6 +27,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import sushi.hardcore.droidfs.BaseActivity
 import sushi.hardcore.droidfs.Constants
@@ -76,6 +77,9 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     // all the elements of the current directory, explorerElements is the (possibly filtered) displayed subset
     private var allExplorerElements: MutableList<ExplorerElement> = mutableListOf()
     private var searchQuery = ""
+    // every element below the current directory (including its direct children), built lazily on the first search
+    private var searchPool: List<ExplorerElement>? = null
+    private var searchLoadingJob: Job? = null
     private var searchItem: MenuItem? = null
     // true between invalidateOptionsMenu() and the re-creation of the menu: the search view is then
     // collapsed by the system, which must not be mistaken for the user closing the search
@@ -346,15 +350,65 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         invalidateOptionsMenu()
     }
 
+    private fun invalidateSearchPool() {
+        searchLoadingJob?.cancel()
+        searchLoadingJob = null
+        searchPool = null
+    }
+
+    private suspend fun collectDescendants(dir: ExplorerElement, out: MutableList<ExplorerElement>, prefix: String, updateSize: Boolean) {
+        yield()
+        for (child in encryptedVolume.readDir(dir.fullPath) ?: return) {
+            child.searchLabel = prefix + child.name
+            out.add(child)
+            if (child.isDirectory) {
+                collectDescendants(child, out, child.searchLabel + "/", mapFolders)
+            }
+            if (updateSize) {
+                dir.stat.size += child.stat.size
+            }
+        }
+    }
+
+    private fun loadSearchPool() {
+        recycler_view_explorer.isVisible = false
+        loader.isVisible = true
+        val children = allExplorerElements.filter { !it.isParentFolder }
+        searchLoadingJob = lifecycleScope.launch {
+            val pool = withContext(Dispatchers.IO) {
+                val result = mutableListOf<ExplorerElement>()
+                for (child in children) {
+                    result.add(child)
+                    if (child.isDirectory) {
+                        // sizes of the direct children are already computed by refreshCurrentDirectory
+                        collectDescendants(child, result, child.name + "/", false)
+                    }
+                }
+                result
+            }
+            searchPool = pool
+            searchLoadingJob = null
+            displayExplorerElements()
+        }
+    }
+
     private fun displayExplorerElements() {
-        ExplorerElement.sortBy(sortOrderValues[currentSortOrderIndex], foldersFirst, allExplorerElements)
+        if (searchQuery.isNotEmpty() && searchPool == null) {
+            // the pool is being built, displayExplorerElements will be called again once it is ready
+            if (searchLoadingJob?.isActive != true) {
+                loadSearchPool()
+            }
+            return
+        }
         explorerElements = if (searchQuery.isEmpty()) {
+            ExplorerElement.sortBy(sortOrderValues[currentSortOrderIndex], foldersFirst, allExplorerElements)
             allExplorerElements
         } else {
             // names containing the query, those starting with it first (stable: keeps the sort order inside each group)
-            val matches = allExplorerElements.filter {
-                !it.isParentFolder && it.name.contains(searchQuery, ignoreCase = true)
-            }
+            val matches = searchPool!!.filter {
+                it.name.contains(searchQuery, ignoreCase = true)
+            }.toMutableList()
+            ExplorerElement.sortBy(sortOrderValues[currentSortOrderIndex], foldersFirst, matches)
             val (prefixMatches, otherMatches) = matches.partition {
                 it.name.startsWith(searchQuery, ignoreCase = true)
             }
@@ -398,6 +452,11 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         if (query == searchQuery) return
         if (keepSearchOnMenuRebuild && query.isEmpty()) return
         searchQuery = query
+        if (query.isEmpty()) {
+            // stop a pending indexation, the full directory is displayed again below
+            searchLoadingJob?.cancel()
+            searchLoadingJob = null
+        }
         // displayExplorerElements must not be called if directoryLoadingTask is active,
         // it will be called with the new query once the loading is over
         if (::explorerElements.isInitialized && directoryLoadingTask?.isActive != true) {
@@ -415,6 +474,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
 
     protected fun refreshCurrentDirectory(onDisplayed: (() -> Unit)? = null) = lifecycleScope.launch {
         directoryLoadingTask?.cancelAndJoin()
+        invalidateSearchPool()
         recycler_view_explorer.isVisible = false
         loader.isVisible = true
         explorerElements = encryptedVolume.readDir(currentDirectoryPath) ?: return@launch
@@ -425,6 +485,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
             )
         }
         allExplorerElements = explorerElements
+        invalidateSearchPool()
         textDirEmpty.visibility = if (explorerElements.size == 0) View.VISIBLE else View.GONE
         displayNumberOfElements(numberOfFilesText, R.string.one_file, R.string.multiple_files, explorerElements.count { it.isRegularFile })
         displayNumberOfElements(numberOfFoldersText, R.string.one_folder, R.string.multiple_folders, explorerElements.count { it.isDirectory })
@@ -611,7 +672,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 val dstPath = if (newName.startsWith("/")) {
                     newName
                 } else {
-                    PathUtils.pathJoin(currentDirectoryPath, newName)
+                    PathUtils.pathJoin(element.parentPath.ifEmpty { "/" }, newName)
                 }
                 val lastComponent = newName.substringAfterLast('/')
                 // if a directory is explicitly requested, rename into it with the original file name

@@ -92,7 +92,7 @@ class ExplorerElementAdapter(
         }
 
         open fun bind(explorerElement: ExplorerElement, position: Int) {
-            textElementName.text = explorerElement.name
+            textElementName.text = explorerElement.searchLabel ?: explorerElement.name
             (bindingAdapter as ExplorerElementAdapter?)?.setSelectable(itemView, position)
         }
     }
