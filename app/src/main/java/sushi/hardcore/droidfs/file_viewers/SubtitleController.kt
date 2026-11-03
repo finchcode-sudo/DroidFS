@@ -31,7 +31,7 @@ import java.util.Locale
  *  - 字幕入口菜单: 选择字幕轨道 / 导入字幕 / 更多设置
  *  - 打开视频时自动加载同文件夹里同名的字幕 (优先级 ass > srt > ssa > vtt > sub > sbv, 再按系统语言选简/繁)
  *  - 更多设置: 字幕延迟(-60~60秒) / 字幕样式(样式覆盖, 文字颜色, 描边颜色, 背景颜色, 描边粗细, 描边模式)
- *            / 字幕杂项(大小 50%~500% (默认250%), 垂直位置 0~100) / 字幕字体
+ *            / 字幕杂项(大小 50%~300%, 垂直位置 0~100) / 字幕字体
  *
  * 字幕文件都在加密卷里, 所以不是复制到手机存储, 而是像视频一样通过 LocalMediaServer
  * 解密后用 127.0.0.1 的 HTTP 地址交给 mpv 的 sub-add, 明文不会落盘。
@@ -42,11 +42,6 @@ class SubtitleController(
     private val currentPath: () -> String,
     private val prefs: SharedPreferences,
 ) {
-    private companion object {
-        const val DEFAULT_SCALE_STR = "1.20"
-        const val DEFAULT_SCALE_PERCENT = 120
-    }
-
     private val servers = mutableListOf<LocalMediaServer>()
     // mpv 的 track-list 不会把原始路径还给我们, 这里自己记一份 mpv轨道id -> 卷内完整路径, 用来判断"已添加"
     private val externalPaths = HashMap<Int, String>()
@@ -94,12 +89,10 @@ class SubtitleController(
         str("sub_back_color", "sub-back-color")
         str("sub_border_size", "sub-border-size")
         str("sub_border_style", "sub-border-style")
-        // 默认字幕大小 250% (mpv 默认 100% 在手机上太小), 用户调过则用保存的值
-        // 注意: mpv 的 sub-ass-override 默认是 yes, 此时 sub-scale 对 ASS 字幕不生效, 必须设成 scale (或 force)
-        MPVLib.setPropertyString("sub-scale", prefs.getString("sub_scale", null) ?: DEFAULT_SCALE_STR)
+        str("sub_scale", "sub-scale")
         str("sub_pos", "sub-pos")
         str("sub_font", "sub-font")
-                MPVLib.setPropertyString("sub-ass-override", prefs.getString("sub_override", null) ?: "force")
+        str("sub_override", "sub-ass-override")
     }
 
     // ---------------------------------------------------------------- 入口菜单
@@ -335,8 +328,6 @@ class SubtitleController(
                     prefs.edit().putString(extKey(), fullPath).remove(offKey()).apply()
                     // 自动加载不弹提示, 只有手动导入才提示
                     if (!auto) Toast.makeText(activity, "已导入字幕: $name", Toast.LENGTH_SHORT).show()
-                    // 调试提示: 确认新代码生效, 确认后可删掉这一行
-                    Toast.makeText(activity, "调试: override=${MPVLib.getPropertyString("sub-ass-override")} scale=${MPVLib.getPropertyString("sub-scale")} font=${MPVLib.getPropertyString("sub-font-size")}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Throwable) {
                 activity.runOnUiThread {
@@ -568,13 +559,13 @@ class SubtitleController(
     private fun showMiscDialog() {
         val root = vbox()
         var scale = ((prefs.getString("sub_scale", null)?.toDoubleOrNull()
-            ?: MPVLib.getPropertyDouble("sub-scale") ?: (DEFAULT_SCALE_PERCENT / 100.0)) * 100).toInt().coerceIn(50, 500)
+            ?: MPVLib.getPropertyDouble("sub-scale") ?: 1.0) * 100).toInt().coerceIn(50, 300)
         var pos = (prefs.getString("sub_pos", null)?.toIntOrNull()
             ?: MPVLib.getPropertyInt("sub-pos") ?: 100).coerceIn(0, 100)
 
         val scaleLabel = label("字幕大小: $scale%")
         val scaleBar = SeekBar(activity).apply {
-            max = 450
+            max = 250
             progress = scale - 50
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
@@ -588,7 +579,7 @@ class SubtitleController(
         }
         root.addView(scaleLabel)
         root.addView(scaleBar)
-        root.addView(hint("范围: 50% ~ 500%"))
+        root.addView(hint("范围: 50% ~ 300%"))
 
         val posLabel = label("字幕垂直位置: $pos")
         val posBar = SeekBar(activity).apply {
@@ -609,11 +600,11 @@ class SubtitleController(
         root.addView(hint("范围: 0 (顶部) ~ 100 (底部)"))
 
         root.addView(Button(activity).apply {
-            text = "重置默认值 ($DEFAULT_SCALE_PERCENT%, 位置100)"
+            text = "重置默认值 (100%, 位置100)"
             setOnClickListener {
-                scaleBar.progress = DEFAULT_SCALE_PERCENT - 50
+                scaleBar.progress = 50
                 posBar.progress = 100
-                saveProp("sub_scale", "sub-scale", DEFAULT_SCALE_STR)
+                saveProp("sub_scale", "sub-scale", "1.00")
                 saveProp("sub_pos", "sub-pos", "100")
             }
         })
