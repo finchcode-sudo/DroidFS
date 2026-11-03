@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DroidFS</string>
     <string name="create_volume">创建加密卷</string>
@@ -106,6 +105,8 @@
     <string name="about">关于</string>
     <string name="github">Github</string>
     <string name="github_summary">DroidFS在Github上的仓库。存有源码，文档以及BUG追踪等</string>
+    <string name="tangled">Tangled</string>
+    <string name="tangled_summary">DroidFS 在 Tangled 上的仓库。与 GitHub 不同，Tangled 是联邦式的，且完全是自由软件。存有源码，文档以及BUG追踪等</string>
     <string name="share">分享</string>
     <string name="decrypt_files">导出</string>
     <string name="copy_failed">复制%s失败</string>
@@ -115,8 +116,10 @@
     <string name="picture_save_success">图片已经保存至%s</string>
     <string name="picture_save_failed">保存图片失败</string>
     <string name="video_save_success">视频已经保存至%s</string>
+    <string name="file_collision_question">另一个选中的文件也将被导入为 %s，要覆盖吗?</string>
     <string name="file_overwrite_question">%s已经存在，覆盖吗?</string>
     <string name="dir_overwrite_question">%s已经存在，要合并吗?</string>
+    <string name="rename_into_dir_question">%1$s 是已存在的文件夹，要把 %2$s 移到里面吗?</string>
     <string name="enter_new_name">输入新名称</string>
     <string name="copy_menu_title">复制</string>
     <string name="move_failed">移动%s失败</string>
@@ -270,6 +273,32 @@
     <string name="export_failed_export">导出文件失败</string>
     <string name="export_mem">导出至内存</string>
     <string name="export_disk">导出至磁盘</string>
+    <string name="memfd_create_unsupported">当前内核不支持 memfd_create()。此功能要求内核版本至少为 %s。</string>
+    <string name="export_method">导出方式</string>
+    <string name="export_method_summary">文件导出方式，用于分享、外部打开和访问已暴露的文件。</string>
+    <string name="debug">调试</string>
+    <string name="logcat">Logcat</string>
+    <string name="logcat_summary">查看 DroidFS 的 logcat</string>
+    <string name="logcat_title">DroidFS Logcat</string>
+    <string name="logcat_saved">Logcat 已保存</string>
+    <string name="later">稍后</string>
+    <string name="notification_denied_msg">通知权限已被拒绝，后台文件操作将不可见。你可以在应用的权限设置中更改。</string>
+    <string name="keep_alive_notification_title">保活服务</string>
     <string name="keep_alive_notification_text">一个或多个卷保持打开状态</string>
-    <string name="file_collision_question">另一个选中的文件也将被导入为 %s，要覆盖吗?</string>
+    <string name="close_all">全部关闭</string>
+    <string name="usf_background">禁用卷自动锁定</string>
+    <string name="usf_background_summary">应用进入后台时不锁定卷</string>
+    <string name="usf_keep_open">保持卷打开</string>
+    <string name="usf_keep_open_summary">让应用始终在后台运行，以保持卷打开</string>
+    <string name="lock_on_screen_lock">锁屏时锁定卷</string>
+    <string name="gocryptfs_details">速度快，但不隐藏文件大小和目录结构</string>
+    <string name="cryfs_details">较慢，但保护元数据并防止替换攻击</string>
+    <string name="or">或</string>
+    <string name="enter_volume_path">输入卷路径</string>
+    <string name="more_options">更多选项</string>
+    <string name="take_photos_repeatedly">连续拍照</string>
+    <string name="choose_quality">选择画质:</string>
+    <string name="aspect_ratio">宽高比:</string>
+    <string name="propose_wipe_imported_files">提示擦除已导入的文件</string>
+    <string name="propose_wipe_imported_files_summary">导入文件后，询问是否从来源处擦除</string>
 </resources>
