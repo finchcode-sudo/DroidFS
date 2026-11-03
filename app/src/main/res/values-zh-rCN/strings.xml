@@ -271,4 +271,5 @@
     <string name="export_mem">导出至内存</string>
     <string name="export_disk">导出至磁盘</string>
     <string name="keep_alive_notification_text">一个或多个卷保持打开状态</string>
+    <string name="file_collision_question">另一个选中的文件也将被导入为 %s，要覆盖吗?</string>
 </resources>
