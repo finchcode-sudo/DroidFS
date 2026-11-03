@@ -38,6 +38,7 @@ class VideoPlayer : FileViewerActivity() {
     private var isUserSeeking = false
     private var firstPlay = true
     private var lastSubPos = -1
+    private var lastSubScale = -1.0
     private val autoFit by lazy { sharedPrefs.getBoolean("autoFit", false) }
 
     private val progressHandler = Handler(Looper.getMainLooper())
@@ -66,6 +67,11 @@ class VideoPlayer : FileViewerActivity() {
     private val longPressTimeoutMs = 350L
     private val longPressHandler = Handler(Looper.getMainLooper())
     private var longPressRunnable: Runnable? = null
+
+    companion object {
+        // 横屏字幕放大倍数, 想再大/小改这里
+        private const val LANDSCAPE_SUB_SCALE_BOOST = 1.8
+    }
 
     override fun getFileType(): String = "video"
 
@@ -181,6 +187,18 @@ class VideoPlayer : FileViewerActivity() {
         if (pos != lastSubPos) {
             lastSubPos = pos
             MPVLib.setPropertyInt("sub-pos", pos)
+        }
+
+        // 横屏时字幕放大(在用户设置的大小基础上乘 LANDSCAPE_SUB_SCALE_BOOST), 竖屏用用户设置的大小
+        val userScale = sharedPrefs.getString("sub_scale", null)?.toDoubleOrNull() ?: 1.0
+        val scale = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            (userScale * LANDSCAPE_SUB_SCALE_BOOST).coerceAtMost(4.0)
+        } else {
+            userScale
+        }
+        if (scale != lastSubScale) {
+            lastSubScale = scale
+            MPVLib.setPropertyDouble("sub-scale", scale)
         }
     }
 
