@@ -9,7 +9,7 @@
     </string-array>
 
     <string-array name="color_names">
-        <item>Dynamic</item>
+        <item>动态</item>
         <item>绿</item>
         <item>红</item>
         <item>蓝</item>
@@ -17,5 +17,11 @@
         <item>橙</item>
         <item>紫</item>
         <item>粉</item>
+    </string-array>
+
+    <string-array name="export_methods">
+        <item>自动(根据可用内存)</item>
+        <item>临时导出到磁盘(可靠，但可能留下痕迹)</item>
+        <item>内存文件(更安全，但不一定可用)</item>
     </string-array>
 </resources>
