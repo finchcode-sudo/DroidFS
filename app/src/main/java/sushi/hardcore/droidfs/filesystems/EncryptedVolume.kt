@@ -156,34 +156,39 @@ abstract class EncryptedVolume: Observable<EncryptedVolume.Observer>() {
         return false
     }
 
-    fun importFile(inputStream: InputStream, dst_path: String): Boolean {
+    fun importFile(inputStream: InputStream, dst_path: String, onProgress: ((Long) -> Unit)? = null): Boolean {
         val dstfileHandle = openFileWriteMode(dst_path)
         if (dstfileHandle != -1L) {
             var success = true
             var offset: Long = 0
-            val ioBuffer = ByteArray(Constants.IO_BUFF_SIZE)
-            var length: Long
-            while (inputStream.read(ioBuffer).also { length = it.toLong() } > 0) {
-                val written = write(dstfileHandle, offset, ioBuffer, 0, length).toLong()
-                if (written == length) {
-                    offset += written
-                } else {
-                    success = false
-                    break
+            try {
+                val ioBuffer = ByteArray(Constants.IO_BUFF_SIZE)
+                var length: Long
+                while (inputStream.read(ioBuffer).also { length = it.toLong() } > 0) {
+                    val written = write(dstfileHandle, offset, ioBuffer, 0, length).toLong()
+                    if (written == length) {
+                        offset += written
+                        // 回调可以抛出 CancellationException 来中断导入
+                        onProgress?.invoke(offset)
+                    } else {
+                        success = false
+                        break
+                    }
                 }
+            } finally {
+                truncate(dst_path, offset)
+                closeFile(dstfileHandle)
+                inputStream.close()
             }
-            truncate(dst_path, offset)
-            closeFile(dstfileHandle)
-            inputStream.close()
             return success
         }
         return false
     }
 
-    fun importFile(context: Context, src_uri: Uri, dst_path: String): Boolean {
+    fun importFile(context: Context, src_uri: Uri, dst_path: String, onProgress: ((Long) -> Unit)? = null): Boolean {
         val inputStream = context.contentResolver.openInputStream(src_uri)
         if (inputStream != null) {
-            return importFile(inputStream, dst_path)
+            return importFile(inputStream, dst_path, onProgress)
         }
         return false
     }

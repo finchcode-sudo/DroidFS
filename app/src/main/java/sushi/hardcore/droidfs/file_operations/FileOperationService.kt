@@ -31,6 +31,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
@@ -62,6 +63,17 @@ class FileOperationService : Service() {
 
     inner class LocalBinder : Binder() {
         fun getService(): FileOperationService = this@FileOperationService
+    }
+
+    /** 导入进度, 由服务线程写入, 界面线程轮询读取 */
+    class ImportProgress {
+        @Volatile var taskId = -1
+        @Volatile var fileIndex = 0
+        @Volatile var fileCount = 0
+        @Volatile var fileName = ""
+        @Volatile var doneBytes = 0L
+        /** -1 表示总大小未知 */
+        @Volatile var totalBytes = -1L
     }
 
     inner class PendingTask<T>(
@@ -485,18 +497,48 @@ class FileOperationService : Service() {
         dstPaths: List<String>,
         uris: List<Uri>,
         taskId: Int,
+        progress: ImportProgress? = null,
     ): String? {
         var failedIndex = -1
+        val job = currentCoroutineContext()[Job]
+        var baseBytes = 0L
+        if (progress != null) {
+            progress.taskId = taskId
+            progress.fileCount = dstPaths.size
+            var total = 0L
+            for (u in uris) {
+                val len = try {
+                    contentResolver.openAssetFileDescriptor(u, "r")?.use { it.length } ?: -1L
+                } catch (e: Exception) { -1L }
+                if (len < 0) { total = -1L; break }
+                total += len
+            }
+            progress.totalBytes = total
+        }
         for (i in dstPaths.indices) {
             yield()
+            progress?.let {
+                it.fileIndex = i + 1
+                it.fileName = File(dstPaths[i]).name
+            }
             try {
-                if (!encryptedVolume.importFile(this@FileOperationService, uris[i], dstPaths[i])) {
+                val onProgress: ((Long) -> Unit)? = if (progress == null) null else { n ->
+                    progress.doneBytes = baseBytes + n
+                    job?.ensureActive()
+                }
+                if (!encryptedVolume.importFile(this@FileOperationService, uris[i], dstPaths[i], onProgress)) {
                     failedIndex = i
                 }
             } catch (e: FileNotFoundException) {
                 failedIndex = i
             }
             if (failedIndex == -1) {
+                if (progress != null && progress.totalBytes > 0) {
+                    baseBytes += try {
+                        contentResolver.openAssetFileDescriptor(uris[i], "r")?.use { it.length } ?: 0L
+                    } catch (e: Exception) { 0L }
+                    progress.doneBytes = baseBytes
+                }
                 updateNotificationProgress(taskId, i+1, dstPaths.size)
             } else {
                 val importedSet = dstPaths.subList(0, i + 1).toHashSet()
@@ -509,9 +551,14 @@ class FileOperationService : Service() {
         return null
     }
 
-    suspend fun importFilesFromUris(volumeId: Int, dstPaths: List<String>, uris: List<Uri>): TaskResult<out String?> {
+    suspend fun importFilesFromUris(
+        volumeId: Int,
+        dstPaths: List<String>,
+        uris: List<Uri>,
+        progress: ImportProgress? = null,
+    ): TaskResult<out String?> {
         return volumeTask(R.string.file_op_import_msg, dstPaths.size, volumeId) { taskId, encryptedVolume ->
-            importFilesFromUris(encryptedVolume, volumeId, dstPaths, uris, taskId)
+            importFilesFromUris(encryptedVolume, volumeId, dstPaths, uris, taskId, progress)
         }
     }
 

@@ -41,6 +41,7 @@ import sushi.hardcore.droidfs.adapters.ExplorerElementAdapter
 import sushi.hardcore.droidfs.adapters.OpenAsDialogAdapter
 import sushi.hardcore.droidfs.content_providers.TemporaryFileProvider
 import sushi.hardcore.droidfs.file_operations.FileOperationService
+import sushi.hardcore.droidfs.widgets.ImportProgressDialog
 import sushi.hardcore.droidfs.file_operations.OperationFile
 import sushi.hardcore.droidfs.file_operations.TaskResult
 import sushi.hardcore.droidfs.file_viewers.AudioPlayer
@@ -631,7 +632,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         }
     }
 
-    protected fun importFilesFromUris(uris: List<Uri>, callback: () -> Unit) {
+    protected fun importFilesFromUris(uris: List<Uri>, showProgress: Boolean = false, callback: () -> Unit) {
         val items = ArrayList<OperationFile>()
         for (uri in uris) {
             val fileName = PathUtils.getFilenameFromURI(this, uri)
@@ -651,7 +652,17 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
             checkPathOverwrite(items, currentDirectoryPath) { checkedItems ->
                 checkedItems?.let {
                     activityScope.launch {
-                        val result = fileOperationService.importFilesFromUris(volumeId, checkedItems.map { it.dstPath!! }, uris)
+                        val progress = if (showProgress) FileOperationService.ImportProgress() else null
+                        val progressDialog = progress?.let {
+                            ImportProgressDialog(this@BaseExplorerActivity, it) {
+                                fileOperationService.cancelOperation(it.taskId)
+                            }.also { d -> d.show() }
+                        }
+                        val result = try {
+                            fileOperationService.importFilesFromUris(volumeId, checkedItems.map { it.dstPath!! }, uris, progress)
+                        } finally {
+                            progressDialog?.dismiss()
+                        }
                         onTaskResult(result, R.string.import_failed, onSuccess = callback)
                         refreshCurrentDirectory()
                     }

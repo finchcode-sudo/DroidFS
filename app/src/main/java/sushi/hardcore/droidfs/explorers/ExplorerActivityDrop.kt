@@ -42,7 +42,7 @@ class ExplorerActivityDrop : BaseExplorerActivity() {
                             if (uri == null) {
                                 false
                             } else {
-                                importFilesFromUris(listOf(uri), ::onImported)
+                                importFilesFromUris(listOf(uri), true, ::onImported)
                                 true
                             }
                         }
@@ -54,7 +54,7 @@ class ExplorerActivityDrop : BaseExplorerActivity() {
                                 intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
                             }
                             if (uris != null) {
-                                importFilesFromUris(uris, ::onImported)
+                                importFilesFromUris(uris, true, ::onImported)
                                 true
                             } else {
                                 false
