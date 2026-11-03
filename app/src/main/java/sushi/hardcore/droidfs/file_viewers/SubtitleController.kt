@@ -43,8 +43,8 @@ class SubtitleController(
     private val prefs: SharedPreferences,
 ) {
     private companion object {
-        const val DEFAULT_SCALE_STR = "2.50"
-        const val DEFAULT_SCALE_PERCENT = 250
+        const val DEFAULT_SCALE_STR = "1.20"
+        const val DEFAULT_SCALE_PERCENT = 120
     }
 
     private val servers = mutableListOf<LocalMediaServer>()
@@ -99,7 +99,7 @@ class SubtitleController(
         MPVLib.setPropertyString("sub-scale", prefs.getString("sub_scale", null) ?: DEFAULT_SCALE_STR)
         str("sub_pos", "sub-pos")
         str("sub_font", "sub-font")
-                MPVLib.setPropertyString("sub-ass-override", prefs.getString("sub_override", null) ?: "scale")
+                MPVLib.setPropertyString("sub-ass-override", prefs.getString("sub_override", null) ?: "force")
     }
 
     // ---------------------------------------------------------------- 入口菜单
@@ -335,6 +335,8 @@ class SubtitleController(
                     prefs.edit().putString(extKey(), fullPath).remove(offKey()).apply()
                     // 自动加载不弹提示, 只有手动导入才提示
                     if (!auto) Toast.makeText(activity, "已导入字幕: $name", Toast.LENGTH_SHORT).show()
+                    // 调试提示: 确认新代码生效, 确认后可删掉这一行
+                    Toast.makeText(activity, "调试: override=${MPVLib.getPropertyString("sub-ass-override")} scale=${MPVLib.getPropertyString("sub-scale")} font=${MPVLib.getPropertyString("sub-font-size")}", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Throwable) {
                 activity.runOnUiThread {
