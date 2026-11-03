@@ -31,7 +31,7 @@ import java.util.Locale
  *  - 字幕入口菜单: 选择字幕轨道 / 导入字幕 / 更多设置
  *  - 打开视频时自动加载同文件夹里同名的字幕 (优先级 ass > srt > ssa > vtt > sub > sbv, 再按系统语言选简/繁)
  *  - 更多设置: 字幕延迟(-60~60秒) / 字幕样式(样式覆盖, 文字颜色, 描边颜色, 背景颜色, 描边粗细, 描边模式)
- *            / 字幕杂项(大小 50%~500% (默认180%), 垂直位置 0~100) / 字幕字体
+ *            / 字幕杂项(大小 50%~500% (默认250%), 垂直位置 0~100) / 字幕字体
  *
  * 字幕文件都在加密卷里, 所以不是复制到手机存储, 而是像视频一样通过 LocalMediaServer
  * 解密后用 127.0.0.1 的 HTTP 地址交给 mpv 的 sub-add, 明文不会落盘。
@@ -43,8 +43,8 @@ class SubtitleController(
     private val prefs: SharedPreferences,
 ) {
     private companion object {
-        const val DEFAULT_SCALE_STR = "1.80"
-        const val DEFAULT_SCALE_PERCENT = 180
+        const val DEFAULT_SCALE_STR = "2.50"
+        const val DEFAULT_SCALE_PERCENT = 250
     }
 
     private val servers = mutableListOf<LocalMediaServer>()
@@ -94,11 +94,12 @@ class SubtitleController(
         str("sub_back_color", "sub-back-color")
         str("sub_border_size", "sub-border-size")
         str("sub_border_style", "sub-border-style")
-        // 默认字幕大小 180% (mpv 默认 100% 在手机上太小), 用户调过则用保存的值
-        MPVLib.setOptionString("sub-scale", prefs.getString("sub_scale", null) ?: DEFAULT_SCALE_STR)
+        // 默认字幕大小 250% (mpv 默认 100% 在手机上太小), 用户调过则用保存的值
+        // 注意: mpv 的 sub-ass-override 默认是 yes, 此时 sub-scale 对 ASS 字幕不生效, 必须设成 scale (或 force)
+        MPVLib.setPropertyString("sub-scale", prefs.getString("sub_scale", null) ?: DEFAULT_SCALE_STR)
         str("sub_pos", "sub-pos")
         str("sub_font", "sub-font")
-        str("sub_override", "sub-ass-override")
+                MPVLib.setPropertyString("sub-ass-override", prefs.getString("sub_override", null) ?: "scale")
     }
 
     // ---------------------------------------------------------------- 入口菜单
