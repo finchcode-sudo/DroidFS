@@ -70,7 +70,7 @@ class VideoPlayer : FileViewerActivity() {
 
     companion object {
         // 横屏字幕放大倍数, 想再大/小改这里
-        private const val LANDSCAPE_SUB_SCALE_BOOST = 1.8
+        private const val LANDSCAPE_SUB_SCALE_BOOST = 2.8
     }
 
     override fun getFileType(): String = "video"
@@ -192,7 +192,7 @@ class VideoPlayer : FileViewerActivity() {
         // 横屏时字幕放大(在用户设置的大小基础上乘 LANDSCAPE_SUB_SCALE_BOOST), 竖屏用用户设置的大小
         val userScale = sharedPrefs.getString("sub_scale", null)?.toDoubleOrNull() ?: 1.0
         val scale = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            (userScale * LANDSCAPE_SUB_SCALE_BOOST).coerceAtMost(4.0)
+            (userScale * LANDSCAPE_SUB_SCALE_BOOST).coerceAtMost(6.0)
         } else {
             userScale
         }
