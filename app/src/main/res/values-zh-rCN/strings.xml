@@ -301,4 +301,7 @@
     <string name="aspect_ratio">宽高比:</string>
     <string name="propose_wipe_imported_files">提示擦除已导入的文件</string>
     <string name="propose_wipe_imported_files_summary">导入文件后，询问是否从来源处擦除</string>
+    <string name="import_progress_title">正在导入 (%1$d/%2$d):</string>
+    <string name="keep_screen_on">保持屏幕常亮</string>
+    <string name="run_in_background">后台运行</string>
 </resources>
