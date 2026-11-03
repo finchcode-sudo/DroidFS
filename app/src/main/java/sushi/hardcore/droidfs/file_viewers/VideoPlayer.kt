@@ -37,6 +37,7 @@ class VideoPlayer : FileViewerActivity() {
     private var isPlaying = true
     private var isUserSeeking = false
     private var firstPlay = true
+    private var lastSubPos = -1
     private val autoFit by lazy { sharedPrefs.getBoolean("autoFit", false) }
 
     private val progressHandler = Handler(Looper.getMainLooper())
@@ -153,8 +154,34 @@ class VideoPlayer : FileViewerActivity() {
 
         binding.videoPlayer.initialize(filesDir.path, cacheDir.path)
         subtitles.applySaved()
+        // 竖屏时把字幕抬到底部控制栏(暂停按钮)上方, 布局变化(旋转/控制栏尺寸变化)时重新计算
+        val subPosListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateSubtitlePosition() }
+        binding.bottomBar.addOnLayoutChangeListener(subPosListener)
+        binding.videoPlayer.addOnLayoutChangeListener(subPosListener)
         loadCurrentFile()
         progressHandler.post(progressRunnable)
+    }
+
+    /**
+     * mpv 的 sub-pos 是相对整个窗口高度的百分比(100 = 窗口最底部)。
+     * 竖屏时字幕默认会被画在底部控制栏上, 盖住暂停按钮, 这里把它限制在控制栏顶部上方;
+     * 横屏恢复用户在字幕菜单里设置的值。
+     */
+    private fun updateSubtitlePosition() {
+        val h = binding.videoPlayer.height
+        if (h <= 0) return
+        val userPos = (sharedPrefs.getString("sub_pos", null)?.toIntOrNull() ?: 100).coerceIn(0, 100)
+        val pos = if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            val marginPx = 8 * resources.displayMetrics.density
+            val limit = (((binding.bottomBar.top - marginPx) / h) * 100).toInt().coerceIn(0, 100)
+            minOf(userPos, limit)
+        } else {
+            userPos
+        }
+        if (pos != lastSubPos) {
+            lastSubPos = pos
+            MPVLib.setPropertyInt("sub-pos", pos)
+        }
     }
 
     private fun loadCurrentFile() {
