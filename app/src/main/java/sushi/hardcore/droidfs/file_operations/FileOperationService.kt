@@ -14,6 +14,7 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -254,6 +255,14 @@ class FileOperationService : Service() {
         notificationBuilder
                 .setProgress(total, progress, false)
                 .setContentText("$progress/$total")
+        notificationManager.notify(taskId, notificationBuilder.build())
+    }
+
+    private fun updateNotificationPercent(taskId: Int, percent: Int, index: Int, count: Int) {
+        val notificationBuilder = notifications[taskId] ?: return
+        notificationBuilder
+                .setProgress(100, percent, false)
+                .setContentText("$percent%  ($index/$count)")
         notificationManager.notify(taskId, notificationBuilder.build())
     }
 
@@ -503,6 +512,7 @@ class FileOperationService : Service() {
         var failedIndex = -1
         val job = currentCoroutineContext()[Job]
         var baseBytes = 0L
+        var lastNotifyTime = 0L
         if (progress != null) {
             progress.taskId = taskId
             progress.fileCount = dstPaths.size
@@ -526,6 +536,13 @@ class FileOperationService : Service() {
                 val onProgress: ((Long) -> Unit)? = if (progress == null) null else { n ->
                     progress.doneBytes = baseBytes + n
                     job?.ensureActive()
+                    // 通知栏进度按字节更新, 每 500ms 刷新一次
+                    val now = SystemClock.elapsedRealtime()
+                    if (progress.totalBytes > 0 && now - lastNotifyTime >= 500) {
+                        lastNotifyTime = now
+                        val percent = (progress.doneBytes * 100 / progress.totalBytes).toInt().coerceIn(0, 100)
+                        updateNotificationPercent(taskId, percent, i + 1, dstPaths.size)
+                    }
                 }
                 if (!encryptedVolume.importFile(this@FileOperationService, uris[i], dstPaths[i], onProgress)) {
                     failedIndex = i
