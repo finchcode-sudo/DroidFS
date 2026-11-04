@@ -36,6 +36,7 @@ abstract class EncryptedVolume: Observable<EncryptedVolume.Observer>() {
     }
 
     companion object {
+        private const val IMPORT_BUFF_SIZE = 128 * 1024
         const val GOCRYPTFS_VOLUME_TYPE: Byte = 0
         const val CRYFS_VOLUME_TYPE: Byte = 1
 
@@ -162,7 +163,8 @@ abstract class EncryptedVolume: Observable<EncryptedVolume.Observer>() {
             var success = true
             var offset: Long = 0
             try {
-                val ioBuffer = ByteArray(Constants.IO_BUFF_SIZE)
+                // 导入用 128KB 缓冲区(gocryptfs 单次写入上限就是 128KB), 比默认 16KB 少 8 倍的 JNI/加密调用次数
+                val ioBuffer = ByteArray(IMPORT_BUFF_SIZE)
                 var length: Long
                 while (inputStream.read(ioBuffer).also { length = it.toLong() } > 0) {
                     val written = write(dstfileHandle, offset, ioBuffer, 0, length).toLong()
