@@ -226,8 +226,6 @@
     <string name="default_open">פתח אמצעי אחסון זה בעת הפעלת היישום</string>
     <string name="remove_default_open">אל תפתח כברירת מחדל</string>
     <string name="elements_selected">%d/%d נבחרו</string>
-    <string name="pin_passwords_title">פריסת מקלדת מספרים</string>
-    <string name="pin_passwords_summary">שימוש בפריסת מקלדת מספרים בעת הזנת סיסמאות אמצעי אחסון</string>
     <string name="volume_type_label">סוג אמצעי אחסון:</string>
     <string name="gocryptfs">Gocryptfs</string>
     <string name="cryfs">CryFS</string>

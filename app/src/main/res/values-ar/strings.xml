@@ -224,8 +224,6 @@
     <string name="default_open">فتح هذا المجلد المشفر عند القيام بتشغيل التطبيق</string>
     <string name="remove_default_open">عدم الفتح بشكل افتراضي</string>
     <string name="elements_selected">%d/%d محدد</string>
-    <string name="pin_passwords_title">نظام مفاتيح لوحة أرقام</string>
-    <string name="pin_passwords_summary">استخدام عرض لوحة أرقام عند القيام بادخال كلمات مرور المجلدات المشفرة</string>
     <string name="volume_type_label">نوع المجلد المشفر:</string>
     <string name="gocryptfs">Gocryptfs</string>
     <string name="cryfs">CryFS</string>

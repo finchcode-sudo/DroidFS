@@ -232,8 +232,6 @@
     <string name="default_open">启动DroidFS时自动打开卷</string>
     <string name="remove_default_open">不要默认打开</string>
     <string name="elements_selected">已选 %d/%d</string>
-    <string name="pin_passwords_title">数字键盘布局</string>
-    <string name="pin_passwords_summary">输入卷的密码时使用纯数字键盘</string>
     <string name="volume_type_label">卷的类型:</string>
     <string name="gocryptfs">Gocryptfs</string>
     <string name="cryfs">CryFS</string>

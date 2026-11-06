@@ -3,7 +3,6 @@ package sushi.hardcore.droidfs.add_volume
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
-import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,7 +13,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import sushi.hardcore.droidfs.BuildConfig
-import sushi.hardcore.droidfs.Constants
 import sushi.hardcore.droidfs.FingerprintProtector
 import sushi.hardcore.droidfs.LoadingTask
 import sushi.hardcore.droidfs.R
@@ -41,7 +39,6 @@ class CreateVolumeFragment: Fragment() {
         private const val KEY_VOLUME_PATH = "path"
         private const val KEY_IS_HIDDEN = "hidden"
         private const val KEY_REMEMBER_VOLUME = "remember"
-        private const val KEY_PIN_PASSWORDS = Constants.PIN_PASSWORDS_KEY
         private const val KEY_USF_FINGERPRINT = "fingerprint"
         
         private val GOCRYPTFS_INFO = FileSystemInfo(
@@ -60,7 +57,6 @@ class CreateVolumeFragment: Fragment() {
             volumePath: String,
             isHidden: Boolean,
             rememberVolume: Boolean,
-            pinPasswords: Boolean,
             usfFingerprint: Boolean,
         ): CreateVolumeFragment {
             return CreateVolumeFragment().apply {
@@ -69,7 +65,6 @@ class CreateVolumeFragment: Fragment() {
                     putString(KEY_VOLUME_PATH, volumePath)
                     putBoolean(KEY_IS_HIDDEN, isHidden)
                     putBoolean(KEY_REMEMBER_VOLUME, rememberVolume)
-                    putBoolean(KEY_PIN_PASSWORDS, pinPasswords)
                     putBoolean(KEY_USF_FINGERPRINT, usfFingerprint)
                 }
             }
@@ -97,13 +92,12 @@ class CreateVolumeFragment: Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val pinPasswords = requireArguments().let { arguments ->
+        requireArguments().let { arguments ->
             theme = Compat.getParcelable(arguments, KEY_THEME_VALUE)!!
             volumePath = arguments.getString(KEY_VOLUME_PATH)!!
             isHiddenVolume = arguments.getBoolean(KEY_IS_HIDDEN)
             rememberVolume = arguments.getBoolean(KEY_REMEMBER_VOLUME)
             usfFingerprint = arguments.getBoolean(KEY_USF_FINGERPRINT)
-            arguments.getBoolean(KEY_PIN_PASSWORDS)
         }
         volumeDatabase = VolumeDatabase(requireContext())
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -149,11 +143,6 @@ class CreateVolumeFragment: Fragment() {
             }
         }
         binding.spinnerCipher.adapter = encryptionCipherAdapter
-        if (pinPasswords) {
-            arrayOf(binding.editPassword, binding.editPasswordConfirm).forEach {
-                it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            }
-        }
         binding.editPasswordConfirm.setOnEditorActionListener { _, _, _ ->
             createVolume()
             true

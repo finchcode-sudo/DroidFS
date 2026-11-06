@@ -2,7 +2,6 @@ package sushi.hardcore.droidfs
 
 import android.annotation.SuppressLint
 import android.os.Build
-import android.text.InputType
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -162,9 +161,6 @@ class VolumeOpener(
                 dialog.dismiss()
                 onPasswordSubmitted(volume, isVolumeSaved, callbacks)
                 true
-            }
-            if (sharedPrefs.getBoolean(Constants.PIN_PASSWORDS_KEY, false)) {
-                inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             }
         }
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)

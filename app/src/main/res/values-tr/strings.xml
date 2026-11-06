@@ -226,8 +226,6 @@
     <string name="default_open">Uygulamayı başlattığınızda bu birimi açın</string>
     <string name="remove_default_open">Varsayılan olarak açma</string>
     <string name="elements_selected">%d/%d seçildi</string>
-    <string name="pin_passwords_title">Sayısal tuş takımı düzeni</string>
-    <string name="pin_passwords_summary">Birim parolalarını girerken sayısal tuş takımı düzeni kullanın</string>
     <string name="volume_type_label">Birim türü:</string>
     <string name="gocryptfs">Gocryptfs</string>
     <string name="cryfs">CryFS</string>

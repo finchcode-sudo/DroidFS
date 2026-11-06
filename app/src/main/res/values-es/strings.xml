@@ -228,8 +228,6 @@
     <string name="default_open">Abrir este volumen cuando se inicia la aplicación</string>
     <string name="remove_default_open">No abrir por defecto</string>
     <string name="elements_selected">%d/%d Seleccionados</string>
-    <string name="pin_passwords_title">Diseño de teclado numérico</string>
-    <string name="pin_passwords_summary">Usar el diseño de teclado numérico para ingresar las contraseñas de los volumenes</string>
     <string name="volume_type_label">Tipo de volumen:</string>
     <string name="gocryptfs">Gocryptfs</string>
     <string name="cryfs">CryFS</string>

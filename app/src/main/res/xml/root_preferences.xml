@@ -75,14 +75,6 @@
             android:icon="@drawable/icon_password"
             app:widgetLayout="@layout/preference_widget_material_switch"/>
 
-        <SwitchPreferenceCompat
-            android:title="@string/pin_passwords_title"
-            android:summary="@string/pin_passwords_summary"
-            android:key="pin_passwords"
-            android:defaultValue="false"
-            android:icon="@drawable/icon_num_pad"
-            app:widgetLayout="@layout/preference_widget_material_switch"/>
-
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/unsafe_features">

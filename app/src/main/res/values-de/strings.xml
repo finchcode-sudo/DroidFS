@@ -226,8 +226,6 @@
     <string name="default_open">Öffnen Sie diesen Datenträger beim Start der Anwendung</string>
     <string name="remove_default_open">Standardmäßig nicht öffnen</string>
     <string name="elements_selected">%d/%d ausgewählt</string>
-    <string name="pin_passwords_title">Numerische Tastaturbelegung</string>
-    <string name="pin_passwords_summary">Numerische Tastaturbelegung bei der Eingabe von Volume-Passwörtern verwenden</string>
     <string name="volume_type_label">Lautstärketyp:</string>
     <string name="gocryptfs">Gocryptfs</string>
     <string name="cryfs">CryFS</string>

@@ -222,8 +222,6 @@
     <string name="default_open">Открывать этот том при запуске приложения</string>
     <string name="remove_default_open">Не открывать по умолчанию</string>
     <string name="elements_selected">Выбрано: %d/%d</string>
-    <string name="pin_passwords_title">Цифровая клавиатура</string>
-    <string name="pin_passwords_summary">Использовать цифровую раскладку клавиатуры при вводе паролей томов</string>
     <string name="volume_type_label">Тип тома:</string>
     <string name="gocryptfs_disabled">Поддержка Gocryptfs отключена</string>
     <string name="cryfs_disabled">Поддержка CryFS отключена</string>

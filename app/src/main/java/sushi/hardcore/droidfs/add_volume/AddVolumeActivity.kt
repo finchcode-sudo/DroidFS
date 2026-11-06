@@ -90,7 +90,6 @@ class AddVolumeActivity: BaseActivity() {
                     volumePath,
                     isHidden,
                     rememberVolume,
-                    sharedPrefs.getBoolean(Constants.PIN_PASSWORDS_KEY, false),
                     sharedPrefs.getBoolean("usf_fingerprint", false),
                 )
             )

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.text.InputType
 import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -50,11 +49,6 @@ class ChangePasswordActivity: BaseActivity() {
         }
         if (!usfFingerprint || fingerprintProtector == null) {
             binding.checkboxSavePassword.visibility = View.GONE
-        }
-        if (sharedPrefs.getBoolean(Constants.PIN_PASSWORDS_KEY, false)) {
-            arrayOf(binding.editCurrentPassword, binding.editNewPassword, binding.editPasswordConfirm).forEach {
-                it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            }
         }
         binding.fingerprintSwitchContainer.setOnClickListener {
             binding.switchUseFingerprint.toggle()

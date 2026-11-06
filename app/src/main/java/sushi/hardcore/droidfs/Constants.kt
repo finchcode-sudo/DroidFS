@@ -15,5 +15,4 @@ object Constants {
     const val DEFAULT_THEME_VALUE = "dark_green"
     const val DEFAULT_VOLUME_KEY = "default_volume"
     const val REMEMBER_VOLUME_KEY = "remember_volume"
-    const val PIN_PASSWORDS_KEY = "pin_passwords"
 }
