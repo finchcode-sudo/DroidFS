@@ -632,6 +632,22 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         }
     }
 
+    /**
+     * gocryptfs 加密后的文件名最长 255 个字符, 对应明文最多约 176 字节(UTF-8),
+     * 超过的话创建文件会失败。导入时把过长的文件名截短, 保留扩展名。
+     */
+    private fun shortenFileName(name: String, maxBytes: Int = 176): String {
+        if (name.toByteArray().size <= maxBytes) return name
+        val dot = name.lastIndexOf('.')
+        val ext = if (dot > 0 && name.length - dot <= 10) name.substring(dot) else ""
+        var stem = name.substring(0, name.length - ext.length)
+        val budget = maxBytes - ext.toByteArray().size
+        while (stem.isNotEmpty() && stem.toByteArray().size > budget) {
+            stem = stem.substring(0, stem.offsetByCodePoints(stem.length, -1))
+        }
+        return stem.trimEnd() + ext
+    }
+
     protected fun importFilesFromUris(uris: List<Uri>, showProgress: Boolean = false, callback: () -> Unit) {
         val items = ArrayList<OperationFile>()
         for (uri in uris) {
@@ -645,7 +661,7 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 items.clear()
                 break
             } else {
-                items.add(OperationFile(PathUtils.pathJoin(currentDirectoryPath, fileName), Stat.S_IFREG))
+                items.add(OperationFile(PathUtils.pathJoin(currentDirectoryPath, shortenFileName(fileName)), Stat.S_IFREG))
             }
         }
         if (items.size > 0) {
