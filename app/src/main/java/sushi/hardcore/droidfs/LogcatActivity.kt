@@ -21,7 +21,7 @@ class LogcatActivity: BaseActivity() {
     private lateinit var binding: ActivityLogcatBinding
     private var process: Process? = null
     private val dateFormat by lazy {
-        SimpleDateFormat("yyyy-MM-dd_HH:mm:ss", Locale.getDefault())
+        SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
     }
     private val saveAs = registerForActivityResult(ActivityResultContracts.CreateDocument("text/*")) { uri ->
         uri?.let {
