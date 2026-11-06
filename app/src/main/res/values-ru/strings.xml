@@ -272,11 +272,6 @@
     <string name="keep_alive_notification_title">Служба поддержки работы</string>
     <string name="keep_alive_notification_text">Один или несколько томов остаются открытыми.</string>
     <string name="close_all">Закрыть все</string>
-    <string name="usf_background">Отключить автоблокировку томов</string>
-    <string name="usf_background_summary">Не блокировать тома автоматически при работе приложения в фоновом режиме</string>
-    <string name="usf_keep_open">Держать тома открытыми</string>
-    <string name="usf_keep_open_summary">Поддерживать постоянную работу приложения в фоновом режиме, чтобы тома оставались открытыми</string>
-    <string name="lock_on_screen_lock">Заблокировать тома при блокировке экрана</string>
     <string name="gocryptfs_details">Быстрый, но не скрывает размеры файлов и структуру папок</string>
     <string name="cryfs_details">Медленнее, но защищает метаданные и предотвращает атаки подмены</string>
     <string name="or">или</string>

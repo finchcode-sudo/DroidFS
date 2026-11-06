@@ -286,11 +286,6 @@
     <string name="keep_alive_notification_title">Keep alive service</string>
     <string name="keep_alive_notification_text">One or more volumes are kept open.</string>
     <string name="close_all">Close all</string>
-    <string name="usf_background">Disable volume auto-locking</string>
-    <string name="usf_background_summary">Don\'t lock volumes when the app goes in background</string>
-    <string name="usf_keep_open">Keep volumes open</string>
-    <string name="usf_keep_open_summary">Maintain the app always running in the background to keep volumes open</string>
-    <string name="lock_on_screen_lock">Lock volumes when the screen is locked</string>
     <string name="gocryptfs_details">Fast, but doesn\'t hide file sizes and directory structure</string>
     <string name="cryfs_details">Slower, but protects metadata and prevents replacement attacks</string>
     <string name="or">or</string>
@@ -304,4 +299,5 @@
     <string name="import_progress_title">Importing (%1$d/%2$d):</string>
     <string name="keep_screen_on">Keep screen on</string>
     <string name="run_in_background">Run in background</string>
+    <string name="auto_lock">Auto-lock</string>
 </resources>

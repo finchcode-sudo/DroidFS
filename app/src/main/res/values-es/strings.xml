@@ -282,11 +282,6 @@
     <string name="keep_alive_notification_title">Mantener el servicio activo</string>
     <string name="keep_alive_notification_text">Uno o más volúmenes se mantienen abiertos.</string>
     <string name="close_all">Cerrar todo</string>
-    <string name="usf_background">Desactivar el bloqueo automático del volumen</string>
-    <string name="usf_background_summary">No bloquear volúmenes cuando la aplicación se ponga en segundo plano</string>
-    <string name="usf_keep_open">Mantener volúmenes abiertos</string>
-    <string name="usf_keep_open_summary">Mantener la aplicación siempre funcionando en segundo plano para mantener los volúmenes abiertos</string>
-    <string name="lock_on_screen_lock">Bloquear volúmenes cuando la pantalla esté bloqueada</string>
     <string name="gocryptfs_details">Rápido, pero no oculta el tamaño de los archivos ni la estructura del directorio</string>
     <string name="cryfs_details">Más lento, pero protege los metadatos y previene los ataques de reemplazo</string>
     <string name="or">o</string>

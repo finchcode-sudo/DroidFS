@@ -74,7 +74,6 @@
     <string name="usf_screenshot">אפשר צילומי מסך</string>
     <string name="usf_fingerprint">אפשר שימרת גיבוב של הסיסמא באמצעות טביעת אצבע</string>
     <string name="usf_volume_management">הגדרת אמצעי אחסון</string>
-    <string name="usf_keep_open">השאר את האמצעי אחסון פתוח כשהאפליקציה רצה ברקע</string>
     <string name="unsafe_features">פיצרים לא בטוחים</string>
     <string name="manage_unsafe_features">נהל פיצרים לא בטוחים</string>
     <string name="manage_unsafe_features_summary">אפשר/מנע פיצרים לא בטוחים</string>

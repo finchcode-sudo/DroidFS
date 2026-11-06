@@ -45,6 +45,17 @@
         <item>Memory file (safer but doesn\'t always work)</item>
     </string-array>
 
+    <string-array name="auto_lock_entries">
+        <item>Immediately</item>
+        <item>1 minute</item>
+        <item>5 minutes</item>
+        <item>10 minutes</item>
+        <item>1 hour</item>
+        <item>5 hours</item>
+        <item>1 day</item>
+        <item>Never</item>
+    </string-array>
+
     <!-- don't translate the following otherwise the app will crash -->
     <string-array name="sort_orders_values">
         <item>name</item>
@@ -64,6 +75,18 @@
         <item>orange</item>
         <item>purple</item>
         <item>pink</item>
+    </string-array>
+
+    <!-- seconds spent in background before volumes are locked, -1 = never -->
+    <string-array name="auto_lock_values">
+        <item>0</item>
+        <item>60</item>
+        <item>300</item>
+        <item>600</item>
+        <item>3600</item>
+        <item>18000</item>
+        <item>86400</item>
+        <item>-1</item>
     </string-array>
 
     <string-array name="export_methods_values">

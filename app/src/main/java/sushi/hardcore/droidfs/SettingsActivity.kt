@@ -128,39 +128,27 @@ class SettingsActivity : BaseActivity() {
                     true
                 }
             }
-            val switchBackground = findPreference<SwitchPreferenceCompat>("usf_background")!!
-            val switchKeepOpen = findPreference<SwitchPreferenceCompat>("usf_keep_open")!!
-            val switchLockOnScreenLock = findPreference<SwitchPreferenceCompat>("lock_on_screen_lock")!!
+            val listAutoLock = findPreference<ListPreference>("auto_lock")!!
             val switchExternalOpen = findPreference<SwitchPreferenceCompat>("usf_open")!!
             val switchExpose = findPreference<SwitchPreferenceCompat>("usf_expose")!!
             val switchSafWrite = findPreference<SwitchPreferenceCompat>("usf_saf_write")!!
 
-            fun onUsfBackgroundChanged(usfBackground: Boolean) {
-                fun updateSwitchPreferenceCompat(switch: SwitchPreferenceCompat) = with (switch) {
-                    isChecked = isChecked && usfBackground
-                    isEnabled = usfBackground
-                    onPreferenceChangeListener?.onPreferenceChange(switch, isChecked)
-                }
-                updateSwitchPreferenceCompat(switchKeepOpen)
-                updateSwitchPreferenceCompat(switchExpose)
-                with(switchLockOnScreenLock) {
-                    isEnabled = usfBackground
-                    if (!usfBackground) {
-                        isChecked = true
-                    }
+            // "暴露已打开的卷" 需要卷在后台保持打开, 所以自动锁定设为"立即"时不可用
+            fun onAutoLockChanged(autoLock: String) {
+                val volumesStayOpen = autoLock != "0"
+                with (switchExpose) {
+                    isChecked = isChecked && volumesStayOpen
+                    isEnabled = volumesStayOpen
+                    onPreferenceChangeListener?.onPreferenceChange(this, isChecked)
                 }
             }
-            onUsfBackgroundChanged(switchBackground.isChecked)
+            onAutoLockChanged(listAutoLock.value ?: "0")
 
             fun updateSafWrite(usfOpen: Boolean? = null, usfExpose: Boolean? = null) {
                 switchSafWrite.isEnabled = usfOpen ?: switchExternalOpen.isChecked || usfExpose ?: switchExpose.isChecked
             }
             updateSafWrite()
 
-            switchBackground.setOnPreferenceChangeListener { _, checked ->
-                onUsfBackgroundChanged(checked as Boolean)
-                true
-            }
             switchExternalOpen.setOnPreferenceChangeListener { _, checked ->
                 updateSafWrite(usfOpen = checked as Boolean)
                 true
@@ -171,8 +159,9 @@ class SettingsActivity : BaseActivity() {
                 true
             }
 
-            switchKeepOpen.setOnPreferenceChangeListener { _, checked ->
-                if (checked as Boolean) {
+            listAutoLock.setOnPreferenceChangeListener { _, newValue ->
+                onAutoLockChanged(newValue as String)
+                if (newValue != "0") {
                     (requireActivity() as SettingsActivity).notificationPermissionHelper.askAndRun {
                         requireContext().let {
                             if (AndroidUtils.isServiceRunning(it, KeepAliveService::class.java)) {

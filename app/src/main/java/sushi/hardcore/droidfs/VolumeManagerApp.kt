@@ -1,10 +1,13 @@
 package sushi.hardcore.droidfs
 
 import android.app.Application
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import androidx.preference.PreferenceManager
+import android.content.SharedPreferences
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -17,9 +20,6 @@ class VolumeManagerApp : Application(), DefaultLifecycleObserver {
         const val ACTION_CLOSE_ALL_VOLUMES = "close_all"
     }
 
-    private val closingServiceIntent by lazy {
-        Intent(this, ClosingService::class.java)
-    }
     private val keepAliveServiceStartIntent by lazy {
         Intent(this, KeepAliveService::class.java).apply {
             action = KeepAliveService.ACTION_START
@@ -36,26 +36,23 @@ class VolumeManagerApp : Application(), DefaultLifecycleObserver {
             )
         )
     }
-    private val usfBackgroundDelegate = AndroidUtils.LiveBooleanPreference("usf_background", false) { _ ->
-        updateServicesStates()
-    }
-    private val usfBackground by usfBackgroundDelegate
-    private val usfKeepOpenDelegate = AndroidUtils.LiveBooleanPreference("usf_keep_open", false) { _ ->
-        updateServicesStates()
-    }
-    private val usfKeepOpen by usfKeepOpenDelegate
-    private val lockOnScreenLockDelegate = AndroidUtils.LiveBooleanPreference("lock_on_screen_lock", true)
-    private val lockOnScreenLock by lockOnScreenLockDelegate
-    var isExporting = false
-    var isStartingExternalApp = false
-    private val screenLockReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == Intent.ACTION_SCREEN_OFF && (lockOnScreenLock || !usfBackground)) {
-                volumeManager.closeAll()
-                TemporaryFileProvider.instance.wipe()
-            }
+    /**
+     * 应用进入后台多少秒后锁定所有卷: 0 = 立即, -1 = 从不, 其余为秒数。
+     * 设置里的 "auto_lock" 是字符串值。
+     */
+    private val prefs by lazy { PreferenceManager.getDefaultSharedPreferences(this) }
+    private val autoLockSeconds: Long
+        get() = prefs.getString("auto_lock", "0")?.toLongOrNull() ?: 0L
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "auto_lock") {
+            updateServicesStates()
         }
     }
+    private val handler = Handler(Looper.getMainLooper())
+    private var backgroundSince = 0L
+    private val lockRunnable = Runnable { lockNow() }
+    var isExporting = false
+    var isStartingExternalApp = false
     val volumeManager = VolumeManager(this).also {
         it.observe(object : VolumeManager.Observer {
             override fun onVolumeStateChanged(volume: VolumeData) {
@@ -64,7 +61,6 @@ class VolumeManagerApp : Application(), DefaultLifecycleObserver {
 
             override fun onAllVolumesClosed() {
                 stopKeepAliveService()
-                // closingService should not be running when this callback is triggered
             }
         })
     }
@@ -72,30 +68,16 @@ class VolumeManagerApp : Application(), DefaultLifecycleObserver {
     override fun onCreate() {
         super<Application>.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        AndroidUtils.LiveBooleanPreference.init(this, usfBackgroundDelegate, usfKeepOpenDelegate, lockOnScreenLockDelegate)
-        ContextCompat.registerReceiver(
-            this,
-            screenLockReceiver,
-            IntentFilter(Intent.ACTION_SCREEN_OFF),
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
     }
 
     fun updateServicesStates() {
-        if (usfBackground && volumeManager.getVolumeCount() > 0) {
-            if (usfKeepOpen) {
-                stopService(closingServiceIntent)
-                if (!AndroidUtils.isServiceRunning(this@VolumeManagerApp, KeepAliveService::class.java)) {
-                    ContextCompat.startForegroundService(this, keepAliveServiceStartIntent)
-                }
-            } else {
-                stopKeepAliveService()
-                if (!AndroidUtils.isServiceRunning(this@VolumeManagerApp, ClosingService::class.java)) {
-                    startService(closingServiceIntent)
-                }
+        // 只要不是"立即"锁定, 就需要前台服务来保持进程存活, 卷才不会随着窗口关闭而丢失
+        if (autoLockSeconds != 0L && volumeManager.getVolumeCount() > 0) {
+            if (!AndroidUtils.isServiceRunning(this@VolumeManagerApp, KeepAliveService::class.java)) {
+                ContextCompat.startForegroundService(this, keepAliveServiceStartIntent)
             }
         } else {
-            stopService(closingServiceIntent)
             stopKeepAliveService()
         }
     }
@@ -104,17 +86,45 @@ class VolumeManagerApp : Application(), DefaultLifecycleObserver {
         stopService(Intent(this, KeepAliveService::class.java))
     }
 
+    private fun lockNow() {
+        handler.removeCallbacks(lockRunnable)
+        backgroundSince = 0L
+        volumeManager.closeAll()
+        TemporaryFileProvider.instance.wipe()
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        handler.removeCallbacks(lockRunnable)
+        val timeout = autoLockSeconds
+        // 回到前台时, 如果在后台待的时间已经超过设定值(定时器可能因休眠被推迟), 立刻锁定
+        if (backgroundSince != 0L && timeout > 0 &&
+            SystemClock.elapsedRealtime() - backgroundSince >= timeout * 1000
+        ) {
+            lockNow()
+        }
+        backgroundSince = 0L
+    }
+
     override fun onResume(owner: LifecycleOwner) {
         isStartingExternalApp = false
     }
 
     override fun onStop(owner: LifecycleOwner) {
-        if (!isStartingExternalApp) {
-            if (!usfBackground) {
+        if (isStartingExternalApp) return
+        val timeout = autoLockSeconds
+        when {
+            timeout == 0L -> {
                 volumeManager.closeAll()
-            }
-            if (!usfBackground || !isExporting) {
                 TemporaryFileProvider.instance.wipe()
+            }
+            else -> {
+                if (!isExporting) {
+                    TemporaryFileProvider.instance.wipe()
+                }
+                if (timeout > 0) {
+                    backgroundSince = SystemClock.elapsedRealtime()
+                    handler.postDelayed(lockRunnable, timeout * 1000)
+                }
             }
         }
     }

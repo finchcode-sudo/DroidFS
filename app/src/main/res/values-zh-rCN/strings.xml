@@ -286,11 +286,6 @@
     <string name="keep_alive_notification_title">保活服务</string>
     <string name="keep_alive_notification_text">一个或多个卷保持打开状态</string>
     <string name="close_all">全部关闭</string>
-    <string name="usf_background">禁用卷自动锁定</string>
-    <string name="usf_background_summary">应用进入后台时不锁定卷</string>
-    <string name="usf_keep_open">保持卷打开</string>
-    <string name="usf_keep_open_summary">让应用始终在后台运行，以保持卷打开</string>
-    <string name="lock_on_screen_lock">锁屏时锁定卷</string>
     <string name="gocryptfs_details">速度快，但不隐藏文件大小和目录结构</string>
     <string name="cryfs_details">较慢，但保护元数据并防止替换攻击</string>
     <string name="or">或</string>
@@ -304,4 +299,5 @@
     <string name="import_progress_title">正在导入 (%1$d/%2$d):</string>
     <string name="keep_screen_on">保持屏幕常亮</string>
     <string name="run_in_background">后台运行</string>
+    <string name="auto_lock">自动锁定</string>
 </resources>

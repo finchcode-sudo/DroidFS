@@ -24,4 +24,15 @@
         <item>临时导出到磁盘(可靠，但可能留下痕迹)</item>
         <item>内存文件(更安全，但不一定可用)</item>
     </string-array>
+
+    <string-array name="auto_lock_entries">
+        <item>立即</item>
+        <item>1分钟</item>
+        <item>5分钟</item>
+        <item>10分钟</item>
+        <item>1小时</item>
+        <item>5小时</item>
+        <item>1天</item>
+        <item>从不</item>
+    </string-array>
 </resources>

@@ -53,27 +53,14 @@
             android:title="@string/usf_fingerprint"
             app:widgetLayout="@layout/preference_widget_material_switch" />
 
-        <SwitchPreferenceCompat
-            android:defaultValue="false"
+        <sushi.hardcore.droidfs.widgets.MaterialListPreference
+            android:key="auto_lock"
+            android:entries="@array/auto_lock_entries"
+            android:entryValues="@array/auto_lock_values"
+            android:defaultValue="0"
+            android:title="@string/auto_lock"
             android:icon="@drawable/icon_lock_open"
-            android:key="usf_background"
-            android:title="@string/usf_background"
-            android:summary="@string/usf_background_summary"
-            app:widgetLayout="@layout/preference_widget_material_switch" />
-
-        <SwitchPreferenceCompat
-            android:icon="@drawable/icon_lock_screen"
-            android:key="lock_on_screen_lock"
-            android:title="@string/lock_on_screen_lock"
-            app:widgetLayout="@layout/preference_widget_material_switch"/>
-
-        <SwitchPreferenceCompat
-            android:defaultValue="false"
-            android:icon="@drawable/icon_lock_open"
-            android:key="usf_keep_open"
-            android:title="@string/usf_keep_open"
-            android:summary="@string/usf_keep_open_summary"
-            app:widgetLayout="@layout/preference_widget_material_switch"/>
+            app:useSimpleSummaryProvider="true"/>
 
     </PreferenceCategory>
 
