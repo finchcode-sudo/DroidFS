@@ -127,6 +127,19 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
                 }
             }
         }
+        // 冷启动(不是旋转屏幕等重建)时, 如果上次的卷还开着, 直接回到上次的文件夹
+        if (savedInstanceState == null && !explorerRouter.pickMode && !explorerRouter.dropMode) {
+            val lastVolume = sharedPrefs.getString(Constants.LAST_VOLUME_KEY, null)
+            if (lastVolume != null) {
+                volumeAdapter.volumes.firstOrNull { it.shortName == lastVolume && volumeManager.isOpen(it) }?.let { volumeData ->
+                    volumeManager.getVolumeId(volumeData)?.let { id ->
+                        val explorerIntent = explorerRouter.getExplorerIntent(id, volumeData.shortName)
+                        sharedPrefs.getString(Constants.LAST_DIR_KEY, null)?.let { explorerIntent.putExtra("startPath", it) }
+                        startActivity(explorerIntent)
+                    }
+                }
+            }
+        }
         FileOperationService.bind(this) {
             fileOperationService = it
         }
@@ -491,7 +504,13 @@ class MainActivity : BaseActivity(), VolumeAdapter.Listener {
             }
 
             override fun onVolumeOpened(id: Int) {
-                startActivity(explorerRouter.getExplorerIntent(id, volume.shortName))
+                val explorerIntent = explorerRouter.getExplorerIntent(id, volume.shortName)
+                if (!explorerRouter.dropMode && !explorerRouter.pickMode &&
+                    sharedPrefs.getString(Constants.LAST_VOLUME_KEY, null) == volume.shortName
+                ) {
+                    sharedPrefs.getString(Constants.LAST_DIR_KEY, null)?.let { explorerIntent.putExtra("startPath", it) }
+                }
+                startActivity(explorerIntent)
                 if (explorerRouter.dropMode || explorerRouter.pickMode) {
                     finish()
                 }

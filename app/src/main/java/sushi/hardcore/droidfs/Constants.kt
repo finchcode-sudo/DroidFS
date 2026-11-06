@@ -9,6 +9,8 @@ object Constants {
     val FAKE_URI: Uri = Uri.parse("fakeuri://droidfs")
     const val WIPE_PASSES = 2
     const val IO_BUFF_SIZE = 16384
+    const val LAST_VOLUME_KEY = "last_volume_name"
+    const val LAST_DIR_KEY = "last_dir"
     const val SLIDESHOW_DELAY: Long = 4000
     const val DEFAULT_THEME_VALUE = "dark_green"
     const val DEFAULT_VOLUME_KEY = "default_volume"

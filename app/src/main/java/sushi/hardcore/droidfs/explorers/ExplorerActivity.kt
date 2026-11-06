@@ -29,6 +29,7 @@ class ExplorerActivity : BaseExplorerActivity() {
         private enum class ItemsActions {NONE, COPY, MOVE}
     }
 
+    override val rememberLocation = true
     private var usf_decrypt = false
     private var usf_share = false
     private var currentItemAction = ItemsActions.NONE

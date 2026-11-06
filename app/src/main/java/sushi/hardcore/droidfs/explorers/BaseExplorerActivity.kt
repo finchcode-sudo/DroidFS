@@ -65,11 +65,19 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
     protected lateinit var encryptedVolume: EncryptedVolume
     private lateinit var volumeName: String
     private lateinit var explorerViewModel: ExplorerViewModel
+    /** 为 true 时, 把当前所在的卷和文件夹记下来, 下次启动可以回到这里 */
+    protected open val rememberLocation = false
     protected var currentDirectoryPath: String = ""
         set(value) {
             field = value
             explorerViewModel.currentDirectoryPath = value
             currentPathText.text = getString(R.string.location, value)
+            if (rememberLocation) {
+                sharedPrefs.edit()
+                    .putString(Constants.LAST_VOLUME_KEY, volumeName)
+                    .putString(Constants.LAST_DIR_KEY, value)
+                    .apply()
+            }
         }
     protected lateinit var fileOperationService: FileOperationService
     protected val activityScope = MainScope()
@@ -136,6 +144,14 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         )
         explorerViewModel = ViewModelProvider(this).get(ExplorerViewModel::class.java)
         currentDirectoryPath = explorerViewModel.currentDirectoryPath
+        // 从"记住的位置"启动时, 跳到上次的文件夹(只在首次创建、且文件夹仍然存在时)
+        if (savedInstanceState == null) {
+            intent.getStringExtra("startPath")?.let { startPath ->
+                if (encryptedVolume.getAttr(startPath)?.type == Stat.S_IFDIR) {
+                    currentDirectoryPath = startPath
+                }
+            }
+        }
         linearLayoutManager = LinearLayoutManager(this@BaseExplorerActivity)
         recycler_view_explorer.adapter = explorerAdapter
         isUsingListLayout = sharedPrefs.getBoolean("useListLayout", true)
