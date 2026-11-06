@@ -298,4 +298,5 @@
     <string name="keep_screen_on">保持屏幕常亮</string>
     <string name="run_in_background">后台运行</string>
     <string name="auto_lock">自动锁定</string>
+    <string name="clipboard_volume_closed">复制或剪切文件时所在的卷已经锁定。</string>
 </resources>

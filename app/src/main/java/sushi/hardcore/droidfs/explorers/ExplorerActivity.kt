@@ -6,7 +6,6 @@ import android.net.Uri
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
-import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
@@ -27,13 +26,21 @@ import sushi.hardcore.droidfs.widgets.EditTextDialog
 class ExplorerActivity : BaseExplorerActivity() {
     companion object {
         private enum class ItemsActions {NONE, COPY, MOVE}
+
+        // 剪贴板是全局的(不属于某一个界面), 这样可以在一个卷里复制/剪切, 切到另一个卷再粘贴
+        private var clipAction = ItemsActions.NONE
+        private var clipSrcVolumeId = -1
+        private val clipItems = ArrayList<OperationFile>()
     }
 
     override val rememberLocation = true
     private var usf_decrypt = false
     private var usf_share = false
-    private var currentItemAction = ItemsActions.NONE
-    private val itemsToProcess = ArrayList<OperationFile>()
+    private var currentItemAction: ItemsActions
+        get() = clipAction
+        set(value) { clipAction = value }
+    private val itemsToProcess: ArrayList<OperationFile>
+        get() = clipItems
     private val unsafeFeaturesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
         loadUnsafeFeatures()
     }
@@ -148,16 +155,6 @@ class ExplorerActivity : BaseExplorerActivity() {
 
     override fun init() {
         super.init()
-        onBackPressedDispatcher.addCallback(this) {
-            if (currentItemAction != ItemsActions.NONE) {
-                cancelItemAction()
-                invalidateOptionsMenu()
-            } else {
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
-                isEnabled = true
-            }
-        }
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener {
             if (currentItemAction != ItemsActions.NONE){
                 openDialogCreateFolder()
@@ -267,6 +264,7 @@ class ExplorerActivity : BaseExplorerActivity() {
                 for (i in explorerAdapter.selectedItems){
                     itemsToProcess.add(OperationFile.fromExplorerElement(explorerElements[i]))
                 }
+                clipSrcVolumeId = volumeId
                 currentItemAction = ItemsActions.MOVE
                 unselectAll()
                 true
@@ -275,17 +273,35 @@ class ExplorerActivity : BaseExplorerActivity() {
                 for (i in explorerAdapter.selectedItems){
                     itemsToProcess.add(OperationFile.fromExplorerElement(explorerElements[i]))
                 }
+                clipSrcVolumeId = volumeId
                 currentItemAction = ItemsActions.COPY
                 unselectAll()
                 true
             }
             R.id.validate -> {
-                if (currentItemAction == ItemsActions.COPY){
+                val srcVolumeId = clipSrcVolumeId
+                val srcVolume = app.volumeManager.getVolume(srcVolumeId)
+                if (srcVolume == null) {
+                    // 复制/剪切时所在的卷已经被锁定, 没法再读取源文件
+                    cancelItemAction()
+                    invalidateOptionsMenu()
+                    MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.error)
+                        .setMessage(R.string.clipboard_volume_closed)
+                        .setPositiveButton(R.string.ok, null)
+                        .show()
+                    return true
+                }
+                val crossVolume = srcVolumeId != volumeId
+                if (currentItemAction == ItemsActions.COPY || (currentItemAction == ItemsActions.MOVE && crossVolume)) {
+                    val isMove = currentItemAction == ItemsActions.MOVE
+                    // 跨卷剪切 = 先复制过去, 成功后再删除源卷里的原文件
+                    val sources = itemsToProcess.toList()
                     object : LoadingTask<List<OperationFile>>(this, R.string.discovering_files) {
                         override suspend fun doTask(): List<OperationFile> {
                             val items = itemsToProcess.toMutableList()
                             itemsToProcess.filter { it.isDirectory }.forEach { dir ->
-                                encryptedVolume.recursiveMapFiles(dir.srcPath)?.forEach {
+                                srcVolume.recursiveMapFiles(dir.srcPath)?.forEach {
                                     items.add(OperationFile.fromExplorerElement(it))
                                 }
                             }
@@ -296,9 +312,26 @@ class ExplorerActivity : BaseExplorerActivity() {
                             it?.let { checkedItems ->
                                 activityScope.launch {
                                     onTaskResult(
-                                        fileOperationService.copyElements(volumeId, checkedItems),
+                                        fileOperationService.copyElements(volumeId, checkedItems, srcVolumeId),
                                         R.string.copy_failed,
-                                        R.string.copy_success,
+                                        if (isMove) R.string.move_success else R.string.copy_success,
+                                        onSuccess = if (isMove) {
+                                            {
+                                                Toast.makeText(this@ExplorerActivity, R.string.move_success, Toast.LENGTH_SHORT).show()
+                                                activityScope.launch {
+                                                    val elements = sources.map { f ->
+                                                        ExplorerElement(f.name, Stat(f.type, 0, 0), f.parentPath)
+                                                    }
+                                                    fileOperationService.removeElements(srcVolumeId, elements)?.let { failed ->
+                                                        MaterialAlertDialogBuilder(this@ExplorerActivity)
+                                                            .setTitle(R.string.error)
+                                                            .setMessage(getString(R.string.remove_failed, failed))
+                                                            .setPositiveButton(R.string.ok, null)
+                                                            .show()
+                                                    }
+                                                }
+                                            }
+                                        } else null,
                                     )
                                     refreshCurrentDirectory()
                                 }

@@ -298,4 +298,5 @@
     <string name="keep_screen_on">Keep screen on</string>
     <string name="run_in_background">Run in background</string>
     <string name="auto_lock">Auto-lock</string>
+    <string name="clipboard_volume_closed">The volume where the files were copied or cut from is locked.</string>
 </resources>
