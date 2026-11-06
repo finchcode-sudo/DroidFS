@@ -129,7 +129,6 @@ class SettingsActivity : BaseActivity() {
                 }
             }
             val listAutoLock = findPreference<ListPreference>("auto_lock")!!
-            val switchExternalOpen = findPreference<SwitchPreferenceCompat>("usf_open")!!
             val switchExpose = findPreference<SwitchPreferenceCompat>("usf_expose")!!
             val switchSafWrite = findPreference<SwitchPreferenceCompat>("usf_saf_write")!!
 
@@ -144,17 +143,17 @@ class SettingsActivity : BaseActivity() {
             }
             onAutoLockChanged(listAutoLock.value ?: "0")
 
-            fun updateSafWrite(usfOpen: Boolean? = null, usfExpose: Boolean? = null) {
-                switchSafWrite.isEnabled = usfOpen ?: switchExternalOpen.isChecked || usfExpose ?: switchExpose.isChecked
+            // "允许写入" 只在 "暴露已打开的卷" 打开时显示; 隐藏时同时关闭, 避免留下看不见的写入权限
+            fun updateSafWrite(usfExpose: Boolean = switchExpose.isChecked) {
+                switchSafWrite.isVisible = usfExpose
+                if (!usfExpose) {
+                    switchSafWrite.isChecked = false
+                }
             }
             updateSafWrite()
 
-            switchExternalOpen.setOnPreferenceChangeListener { _, checked ->
-                updateSafWrite(usfOpen = checked as Boolean)
-                true
-            }
             switchExpose.setOnPreferenceChangeListener { _, checked ->
-                updateSafWrite(usfExpose = checked as Boolean)
+                updateSafWrite(checked as Boolean)
                 VolumeProvider.notifyRootsChanged(requireContext())
                 true
             }
