@@ -664,6 +664,89 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
         return stem.trimEnd() + ext
     }
 
+    /** 流式计算要导入的文件的 SHA-256。任何失败都返回 null (按"不相同"处理, 方向是安全的)。需在 IO 线程调用。 */
+    private fun sha256OfUri(uri: Uri): ByteArray? {
+        return try {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val input = contentResolver.openInputStream(uri) ?: return null
+            input.use {
+                val buf = ByteArray(128 * 1024)
+                while (true) {
+                    val n = it.read(buf)
+                    if (n < 0) break
+                    md.update(buf, 0, n)
+                }
+            }
+            md.digest()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** 流式计算加密卷里某个文件的 SHA-256。失败返回 null。需在 IO 线程调用。 */
+    private fun sha256OfVolumeFile(path: String): ByteArray? {
+        val handle = encryptedVolume.openFileReadMode(path)
+        if (handle == -1L) return null
+        return try {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val buf = ByteArray(128 * 1024)
+            var offset = 0L
+            while (true) {
+                val n = encryptedVolume.read(handle, offset, buf, 0L, buf.size.toLong())
+                if (n <= 0) break
+                md.update(buf, 0, n)
+                offset += n
+            }
+            md.digest()
+        } catch (e: Exception) {
+            null
+        } finally {
+            encryptedVolume.closeFile(handle)
+        }
+    }
+
+    /** 卷里的 path 是不是和要导入的文件内容完全一致: 先比大小, 大小相同才算哈希。 */
+    private fun isSameContent(srcSize: Long, srcHash: Lazy<ByteArray?>, path: String): Boolean {
+        val attr = encryptedVolume.getAttr(path) ?: return false
+        if (attr.type != Stat.S_IFREG) return false
+        if (srcSize < 0 || attr.size != srcSize) return false
+        val a = srcHash.value ?: return false
+        val b = sha256OfVolumeFile(path) ?: return false
+        return a.contentEquals(b)
+    }
+
+    /**
+     * 为一个要导入的文件决定最终路径 (需在 IO 线程调用):
+     * - 路径没被占用: 原样返回。
+     * - 被占用: 依次检查 "名字", "名字 (1)", "名字 (2)" ...
+     *   遇到空闲的就用它 (内容不同的同名文件两份都保留);
+     *   遇到内容完全相同的 (哈希一致) 就返回它, 交给原来的"覆盖吗"确认流程。
+     * 哈希只在路径被占用且大小相同时才计算。
+     */
+    private fun resolveImportPath(uri: Uri, path: String, taken: Set<String>): String {
+        if (path !in taken && !encryptedVolume.pathExists(path)) return path
+        val srcSize = try {
+            contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
+        } catch (e: Exception) { -1L }
+        val srcHash = lazy { sha256OfUri(uri) }
+        val dir = PathUtils.getParentPath(path)
+        // 先留出后缀的空间, 避免名字过长时后缀被截掉
+        val name = shortenFileName(path.substringAfterLast('/'), 160)
+        val dot = name.lastIndexOf('.')
+        val stem = if (dot > 0) name.substring(0, dot) else name
+        val ext = if (dot > 0) name.substring(dot) else ""
+        var candidate = path
+        var n = 0
+        while (true) {
+            if (candidate !in taken) {
+                if (!encryptedVolume.pathExists(candidate)) return candidate
+                if (isSameContent(srcSize, srcHash, candidate)) return candidate
+            }
+            n++
+            candidate = PathUtils.pathJoin(dir, "$stem ($n)$ext")
+        }
+    }
+
     protected fun importFilesFromUris(uris: List<Uri>, showProgress: Boolean = false, callback: () -> Unit) {
         val items = ArrayList<OperationFile>()
         for (uri in uris) {
@@ -680,7 +763,17 @@ open class BaseExplorerActivity : BaseActivity(), ExplorerElementAdapter.Listene
                 items.add(OperationFile(PathUtils.pathJoin(currentDirectoryPath, shortenFileName(fileName)), Stat.S_IFREG))
             }
         }
-        if (items.size > 0) {
+        if (items.size > 0) activityScope.launch {
+            // 哈希比对可能要读很久, 必须放到 IO 线程, 不能卡住界面
+            withContext(Dispatchers.IO) {
+                val taken = HashSet<String>()
+                for (i in items.indices) {
+                    val path = items[i].srcPath
+                    val resolved = resolveImportPath(uris[i], path, taken)
+                    if (resolved != path) items[i].dstPath = resolved
+                    taken.add(resolved)
+                }
+            }
             checkPathOverwrite(items, currentDirectoryPath) { checkedItems ->
                 checkedItems?.let {
                     activityScope.launch {
