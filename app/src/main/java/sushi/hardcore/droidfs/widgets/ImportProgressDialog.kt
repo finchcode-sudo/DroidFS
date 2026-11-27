@@ -20,8 +20,8 @@ import sushi.hardcore.droidfs.file_operations.FileOperationService
 class ImportProgressDialog(
     context: Context,
     private val progress: FileOperationService.ImportProgress,
-    onCancel: () -> Unit,
     private val titleId: Int = R.string.import_progress_title,
+    onCancel: () -> Unit,
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val view = LayoutInflater.from(context).inflate(R.layout.dialog_import_progress, null)

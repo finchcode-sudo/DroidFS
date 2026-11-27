@@ -450,9 +450,9 @@ class ExplorerActivity : BaseExplorerActivity() {
     private fun findDuplicates(items: List<ExplorerElement>) {
         activityScope.launch {
             val progress = FileOperationService.ImportProgress()
-            val progressDialog = ImportProgressDialog(this@ExplorerActivity, progress, {
+            val progressDialog = ImportProgressDialog(this@ExplorerActivity, progress, R.string.find_duplicates_progress_title) {
                 fileOperationService.cancelOperation(progress.taskId)
-            }, R.string.find_duplicates_progress_title)
+            }
             progressDialog.show()
             val result = try {
                 fileOperationService.findDuplicates(volumeId, items, progress)
