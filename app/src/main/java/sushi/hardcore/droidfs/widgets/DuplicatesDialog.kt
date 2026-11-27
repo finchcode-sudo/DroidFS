@@ -1,6 +1,7 @@
 package sushi.hardcore.droidfs.widgets
 
 import android.content.Context
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
@@ -86,17 +87,25 @@ class DuplicatesDialog(
     fun show() {
         val builder = MaterialAlertDialogBuilder(context)
             .setTitle(R.string.duplicates_result_title)
-            .setView(ListView(context).also {
+            .setView(object : ListView(context) {
+                override fun onMeasure(w: Int, h: Int) {
+                    var max = resources.displayMetrics.heightPixels / 2
+                    if (View.MeasureSpec.getMode(h) != View.MeasureSpec.UNSPECIFIED) max = minOf(max, View.MeasureSpec.getSize(h))
+                    super.onMeasure(w, View.MeasureSpec.makeMeasureSpec(max, View.MeasureSpec.AT_MOST))
+                }
+            }.also {
                 it.adapter = adapter
                 it.divider = null
             })
             .setCancelable(false)
+            .setBackgroundInsetTop((8 * context.resources.displayMetrics.density).toInt())
             .setNegativeButton(R.string.cancel, null)
         if (report.groups.isNotEmpty()) {
             builder.setPositiveButton(R.string.duplicates_delete, null)
                 .setNeutralButton(R.string.duplicates_select_extra, null)
         }
         val dialog = builder.show()
+        dialog.window?.setGravity(Gravity.TOP)
         // 在 show 之后设置监听, 点击按钮时对话框才不会自动关闭
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
             selected.clear()
