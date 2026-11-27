@@ -299,4 +299,18 @@
     <string name="run_in_background">后台运行</string>
     <string name="auto_lock">自动锁定</string>
     <string name="clipboard_volume_closed">复制或剪切文件时所在的卷已经锁定。</string>
+    <string name="find_duplicates">查找重复文件</string>
+    <string name="file_op_find_duplicates_msg">正在查找重复文件</string>
+    <string name="find_duplicates_progress_title">正在查重 (%1$d/%2$d):</string>
+    <string name="no_duplicates_found">没有发现重复文件</string>
+    <string name="duplicates_result_title">重复文件</string>
+    <string name="duplicates_summary">重复文件 %1$d 组，多余副本共占 %2$s</string>
+    <string name="duplicates_group">第 %1$d 组 · %2$d 个相同文件 · 每个 %3$s</string>
+    <string name="duplicates_unreadable">以下 %1$d 项读取失败，没有参与比较：</string>
+    <string name="duplicates_select_extra">勾选多余副本</string>
+    <string name="duplicates_delete">删除所选</string>
+    <string name="duplicates_keep_one">每组至少要保留一个文件</string>
+    <string name="duplicates_none_selected">还没有勾选文件</string>
+    <string name="duplicates_delete_confirm">确定删除勾选的 %1$d 个文件吗？删除后无法恢复。</string>
+    <string name="duplicates_changed">扫描后文件发生了变化，没有删除任何文件。请重新查找。</string>
 </resources>

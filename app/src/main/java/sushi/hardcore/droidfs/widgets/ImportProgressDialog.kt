@@ -21,6 +21,7 @@ class ImportProgressDialog(
     context: Context,
     private val progress: FileOperationService.ImportProgress,
     onCancel: () -> Unit,
+    private val titleId: Int = R.string.import_progress_title,
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val view = LayoutInflater.from(context).inflate(R.layout.dialog_import_progress, null)
@@ -31,7 +32,7 @@ class ImportProgressDialog(
     private val context = context
 
     private val dialog: AlertDialog = MaterialAlertDialogBuilder(context)
-        .setTitle(context.getString(R.string.import_progress_title, 0, 0))
+        .setTitle(context.getString(titleId, 0, 0))
         .setView(view)
         .setCancelable(false)
         .setNegativeButton(R.string.cancel) { _, _ -> onCancel() }
@@ -56,7 +57,7 @@ class ImportProgressDialog(
     }
 
     private fun update() {
-        dialog.setTitle(context.getString(R.string.import_progress_title, progress.fileIndex, progress.fileCount))
+        dialog.setTitle(context.getString(titleId, progress.fileIndex, progress.fileCount))
         textName.text = progress.fileName
         val total = progress.totalBytes
         if (total > 0) {

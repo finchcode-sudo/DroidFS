@@ -35,6 +35,12 @@
         android:title="@string/decrypt_files"/>
 
     <item
+        android:id="@+id/find_duplicates"
+        app:showAsAction="never"
+        android:visible="false"
+        android:title="@string/find_duplicates"/>
+
+    <item
         android:id="@+id/share"
         app:showAsAction="ifRoom"
         android:visible="false"

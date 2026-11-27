@@ -750,6 +750,93 @@ class FileOperationService : Service() {
         }.failedItem // treat cancellation as success
     }
 
+    class DuplicateReport(
+        val groups: List<List<ExplorerElement>>,
+        /** 读不出来的文件和目录, 它们没有参与比较 */
+        val unreadable: List<String>,
+    )
+
+    class FindDuplicatesResult(val taskResult: TaskResult<out String?>, val report: DuplicateReport?)
+
+    suspend fun findDuplicates(volumeId: Int, items: List<ExplorerElement>, progress: ImportProgress): FindDuplicatesResult {
+        var report: DuplicateReport? = null
+        val result = volumeTask<String?>(R.string.file_op_find_duplicates_msg, null, volumeId) { taskId, encryptedVolume ->
+            progress.taskId = taskId
+            // 以路径为键: 搜索结果里可能同时选中文件夹和它里面的文件, 同一个文件绝不能算两次
+            val files = LinkedHashMap<String, DuplicateFinder.Entry<ExplorerElement>>()
+            val visitedDirs = HashSet<String>()
+            val unreadable = ArrayList<String>()
+
+            suspend fun collect(element: ExplorerElement) {
+                yield()
+                if (element.isDirectory) {
+                    if (!visitedDirs.add(element.fullPath)) return
+                    progress.fileName = element.fullPath
+                    val children = encryptedVolume.readDir(element.fullPath)
+                    if (children == null) {
+                        unreadable.add(element.fullPath)
+                    } else {
+                        for (child in children) collect(child)
+                    }
+                } else if (element.isRegularFile) {
+                    files[element.fullPath] = DuplicateFinder.Entry(element, element.fullPath, element.stat.size)
+                }
+            }
+            for (item in items) collect(item)
+
+            val job = currentCoroutineContext()[Job]
+            val buffer = ByteArray(128 * 1024)
+            var lastNotifyTime = 0L
+            val found = DuplicateFinder.find(
+                files.values.toList(),
+                hash = { entry, length, onBytes ->
+                    val handle = encryptedVolume.openFileReadMode(entry.path)
+                    if (handle == -1L) {
+                        null
+                    } else {
+                        try {
+                            DuplicateFinder.sha256(length, buffer, { offset, size ->
+                                encryptedVolume.read(handle, offset, buffer, 0, size.toLong())
+                            }) {
+                                yield()
+                                onBytes(it)
+                            }
+                        } finally {
+                            encryptedVolume.closeFile(handle)
+                        }
+                    }
+                },
+                onStage = { count, bytes ->
+                    progress.fileIndex = 0
+                    progress.fileCount = count
+                    progress.doneBytes = 0
+                    progress.totalBytes = if (bytes > 0) bytes else -1
+                },
+                onFile = {
+                    job?.ensureActive()
+                    progress.fileIndex++
+                    progress.fileName = it
+                },
+                onBytes = { bytes ->
+                    progress.doneBytes = bytes
+                    // 通知栏最多每 500ms 刷新一次
+                    val now = SystemClock.elapsedRealtime()
+                    if (progress.totalBytes > 0 && now - lastNotifyTime >= 500) {
+                        lastNotifyTime = now
+                        val percent = (bytes * 100 / progress.totalBytes).toInt().coerceIn(0, 100)
+                        updateNotificationPercent(taskId, percent, progress.fileIndex, progress.fileCount)
+                    }
+                },
+            )
+            report = DuplicateReport(
+                found.groups.map { group -> group.map { it.item } },
+                unreadable + found.unreadable,
+            )
+            null
+        }
+        return FindDuplicatesResult(result, report)
+    }
+
     private suspend fun recursiveCountChildElements(rootDirectory: DocumentFile): Int {
         yield()
         val children = rootDirectory.listFiles()

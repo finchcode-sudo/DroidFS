@@ -12,15 +12,20 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import sushi.hardcore.droidfs.CameraActivity
 import sushi.hardcore.droidfs.LoadingTask
 import sushi.hardcore.droidfs.MainActivity
 import sushi.hardcore.droidfs.R
 import sushi.hardcore.droidfs.SettingsActivity
 import sushi.hardcore.droidfs.adapters.IconTextDialogAdapter
+import sushi.hardcore.droidfs.file_operations.FileOperationService
 import sushi.hardcore.droidfs.file_operations.OperationFile
 import sushi.hardcore.droidfs.filesystems.Stat
 import sushi.hardcore.droidfs.util.PathUtils
+import sushi.hardcore.droidfs.widgets.ImportProgressDialog
+import sushi.hardcore.droidfs.widgets.DuplicatesDialog
 import sushi.hardcore.droidfs.widgets.EditTextDialog
 
 class ExplorerActivity : BaseExplorerActivity() {
@@ -233,6 +238,8 @@ class ExplorerActivity : BaseExplorerActivity() {
             menu.findItem(R.id.copy).isVisible = anyItemSelected
             menu.findItem(R.id.cut).isVisible = anyItemSelected
             menu.findItem(R.id.decrypt).isVisible = anyItemSelected && usf_decrypt
+            menu.findItem(R.id.find_duplicates).isVisible = explorerAdapter.selectedItems.size > 1 ||
+                    explorerAdapter.selectedItems.any { explorerElements[it].isDirectory }
             if (anyItemSelected && usf_share){
                 var containsDir = false
                 for (i in explorerAdapter.selectedItems) {
@@ -424,6 +431,12 @@ class ExplorerActivity : BaseExplorerActivity() {
                 pickExportDirectory.launch(null)
                 true
             }
+            R.id.find_duplicates -> {
+                val items = explorerAdapter.selectedItems.map { i -> explorerElements[i] }
+                unselectAll()
+                findDuplicates(items)
+                true
+            }
             R.id.unsafe_features -> {
                 unsafeFeaturesLauncher.launch(Intent(this, SettingsActivity::class.java).apply {
                     putExtra("screen", "UnsafeFeaturesSettingsFragment")
@@ -431,6 +444,57 @@ class ExplorerActivity : BaseExplorerActivity() {
                 true
             }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun findDuplicates(items: List<ExplorerElement>) {
+        activityScope.launch {
+            val progress = FileOperationService.ImportProgress()
+            val progressDialog = ImportProgressDialog(this@ExplorerActivity, progress, {
+                fileOperationService.cancelOperation(progress.taskId)
+            }, R.string.find_duplicates_progress_title)
+            progressDialog.show()
+            val result = try {
+                fileOperationService.findDuplicates(volumeId, items, progress)
+            } finally {
+                progressDialog.dismiss()
+            }
+            onTaskResult(result.taskResult, R.string.error) {
+                val report = result.report!!
+                if (report.groups.isEmpty() && report.unreadable.isEmpty()) {
+                    Toast.makeText(this@ExplorerActivity, R.string.no_duplicates_found, Toast.LENGTH_LONG).show()
+                } else {
+                    DuplicatesDialog(this@ExplorerActivity, report, ::deleteDuplicates).show()
+                }
+            }
+        }
+    }
+
+    /** @param keptCopies 每个有文件要删除的组里, 保留下来的那些副本 */
+    private fun deleteDuplicates(toDelete: List<ExplorerElement>, keptCopies: List<List<ExplorerElement>>) {
+        activityScope.launch {
+            // 扫描之后文件可能已经变动: 要保留的副本不在了就一个都不删
+            val stillSafe = withContext(Dispatchers.IO) {
+                keptCopies.all { copies ->
+                    copies.any { encryptedVolume.getAttr(it.fullPath)?.size == it.stat.size }
+                }
+            }
+            if (!stillSafe) {
+                MaterialAlertDialogBuilder(this@ExplorerActivity)
+                    .setTitle(R.string.error)
+                    .setMessage(R.string.duplicates_changed)
+                    .setPositiveButton(R.string.ok, null)
+                    .show()
+                return@launch
+            }
+            fileOperationService.removeElements(volumeId, toDelete)?.let { failedItem ->
+                MaterialAlertDialogBuilder(this@ExplorerActivity)
+                    .setTitle(R.string.error)
+                    .setMessage(getString(R.string.remove_failed, failedItem))
+                    .setPositiveButton(R.string.ok, null)
+                    .show()
+            }
+            refreshCurrentDirectory()
         }
     }
 
